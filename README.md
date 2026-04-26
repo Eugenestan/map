@@ -1,36 +1,186 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nha Trang Map
 
-## Getting Started
+Next.js-приложение с пользовательскими метками, отзывами, жалобами и админкой для модерации. Проект подготовлен под стек `VPS + Docker + Postgres`.
 
-First, run the development server:
+## Стек
+
+- `Next.js 16`
+- `Postgres` вместо SQLite
+- `Cloudflare Turnstile` для публичных форм
+- `Vitest` для unit/integration
+- `Playwright` для smoke e2e
+- `Docker + compose` для production/VPS
+
+## Что важно знать
+
+- Runtime-инициализации схемы БД больше нет: сначала нужно прогнать миграции.
+- Справочники категорий и тегов загружаются через `npm run db:seed`.
+- Demo-места и demo-отзывы загружаются только через `npm run db:seed:demo` или `SEED_DEMO_DATA=true`.
+- Для локальной разработки без Turnstile можно использовать `TURNSTILE_BYPASS=true` или просто не задавать Turnstile keys вне production.
+
+## Переменные окружения
+
+Скопируйте `.env.example` в `.env.local` для локальной разработки или в `.env` для Docker/VPS:
+
+```bash
+cp .env.example .env.local
+```
+
+Обязательные переменные:
+
+- `DATABASE_URL`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD_HASH`
+- `ADMIN_SESSION_SECRET`
+
+Для production anti-bot:
+
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+- `TURNSTILE_SECRET_KEY`
+
+Хеш админского пароля можно сгенерировать так:
+
+```bash
+node -e "const { randomBytes, scryptSync } = require('crypto'); const salt = randomBytes(16).toString('hex'); const hash = scryptSync('your-password', salt, 64).toString('hex'); console.log(salt + ':' + hash)"
+```
+
+## Локальный запуск
+
+### 1. Поднять Postgres
+
+Проще всего через Docker:
+
+```bash
+docker compose up -d db
+```
+
+### 2. Установить зависимости
+
+```bash
+npm ci
+```
+
+### 3. Применить миграции и загрузить справочники
+
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+Если нужен demo-набор для разработки:
+
+```bash
+npm run db:seed:demo
+```
+
+### 4. Запустить приложение
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Локально `npm run dev` специально запускает webpack-режим с ограничением памяти для более стабильной работы на Windows. Если нужен более быстрый, но потенциально более тяжёлый dev-режим, можно использовать `npm run dev:turbo`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Скрипты
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run db:migrate` — применить SQL-миграции Postgres
+- `npm run db:seed` — загрузить справочники категорий и тегов
+- `npm run db:seed:demo` — загрузить справочники и demo-данные
+- `npm run dev` — локальный dev через webpack в более щадящем режиме
+- `npm run dev:turbo` — dev через Turbopack
+- `npm run lint` — ESLint
+- `npm run test` — Vitest + coverage
+- `npm run test:e2e` — Playwright smoke
 
-## Learn More
+## Тесты
 
-To learn more about Next.js, take a look at the following resources:
+Unit/integration:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run test
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Smoke e2e:
 
-## Deploy on Vercel
+```bash
+npm run test:e2e
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+По умолчанию e2e использует:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- локальный Postgres по `postgresql://postgres:postgres@127.0.0.1:5432/nhatrang_map_test`
+- anti-bot bypass
+- отдельный dev server на `http://127.0.0.1:3100`
+
+## Docker production
+
+Собрать и поднять весь стек:
+
+```bash
+docker compose up -d --build
+```
+
+Что делает контейнер приложения на старте:
+
+1. применяет миграции;
+2. загружает справочники;
+3. запускает `next start`.
+
+Если вы не хотите каждый раз запускать seed на старте, можно позже вынести его в отдельную операционную команду, но сейчас он идемпотентный и безопасен.
+
+## Deploy на VPS
+
+Базовый flow:
+
+1. Установить Docker и Docker Compose plugin на VPS.
+2. Склонировать репозиторий на сервер.
+3. Создать `.env` на основе `.env.example`.
+4. Заполнить production-значения для `DATABASE_URL`, `ADMIN_*`, Turnstile keys.
+5. Выполнить:
+
+```bash
+docker compose up -d --build
+```
+
+Рекомендуемая схема reverse proxy:
+
+- `Nginx` или `Caddy` на VPS
+- проксирование `80/443 -> 127.0.0.1:3000`
+- TLS через Let's Encrypt
+
+## GitHub Actions
+
+Файл `.github/workflows/ci.yml` запускает:
+
+1. `npm ci`
+2. `npm run lint`
+3. `npm run test`
+4. `npm run build`
+5. `npm run test:e2e` с Postgres service
+
+## Публикация в GitHub
+
+Целевой репозиторий: [Eugenestan/map](https://github.com/Eugenestan/map)
+
+Локально после проверки можно выполнить стандартный flow:
+
+```bash
+git remote add origin https://github.com/Eugenestan/map.git
+git add .
+git commit -m "Prepare Postgres, anti-bot, tests, and deploy setup"
+git push -u origin HEAD
+```
+
+## Резервные копии
+
+Для Postgres на VPS базовый backup можно делать так:
+
+```bash
+docker compose exec db pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > backup.sql
+```
+
+Восстановление:
+
+```bash
+cat backup.sql | docker compose exec -T db psql -U "$POSTGRES_USER" "$POSTGRES_DB"
+```
