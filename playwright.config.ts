@@ -1,6 +1,9 @@
 import { defineConfig } from "@playwright/test";
 
 const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres:postgres@127.0.0.1:5432/nhatrang_map";
+const webServerCommand = process.env.CI
+  ? "npm run db:migrate && npm run db:seed:demo && npx next start -p 3100 -H 127.0.0.1"
+  : "node --max-old-space-size=2048 ./node_modules/next/dist/bin/next dev --webpack -p 3100";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -13,7 +16,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "npm run db:migrate && npm run db:seed:demo && node --max-old-space-size=2048 ./node_modules/next/dist/bin/next dev --webpack -p 3100",
+    command: webServerCommand,
     url: "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
