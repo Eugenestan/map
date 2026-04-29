@@ -5,14 +5,16 @@ const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres:postgres@
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 30_000,
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 1 : undefined,
   use: {
     baseURL: "http://127.0.0.1:3100",
     trace: "on-first-retry",
   },
   webServer: {
-    command: "npm run db:migrate && npm run db:seed:demo && npx next dev -p 3100",
+    command: "npm run db:migrate && npm run db:seed:demo && node --max-old-space-size=2048 ./node_modules/next/dist/bin/next dev --webpack -p 3100",
     url: "http://127.0.0.1:3100",
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
       ...process.env,
