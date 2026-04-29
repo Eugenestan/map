@@ -29,6 +29,7 @@ test("admin can login", async ({ page }) => {
   await page.getByRole("button", { name: "Войти" }).click();
   expect((await loginResponse).status()).toBe(200);
 
+  await page.reload();
   await expect(page.getByRole("button", { name: "Выйти" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Одобренные/i })).toBeVisible();
 });
