@@ -82,6 +82,16 @@ function FlyTo({ center }: FlyToProps) {
   return null;
 }
 
+function AttributionPrefixCleaner() {
+  const map = useMap();
+
+  useEffect(() => {
+    map.attributionControl.setPrefix(false);
+  }, [map]);
+
+  return null;
+}
+
 interface MapViewProps {
   places: PlaceWithDetails[];
   onBoundsChange?: (bbox: BBox) => void;
@@ -128,6 +138,7 @@ export function MapView({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <AttributionPrefixCleaner />
 
       {onBoundsChange && <MapEvents onBoundsChange={onBoundsChange} />}
       {pickMode && onPick && <PickLocation onPick={onPick} />}
