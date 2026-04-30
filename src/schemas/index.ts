@@ -61,3 +61,20 @@ export const filtersSchema = z.object({
 });
 
 export type FiltersInput = z.infer<typeof filtersSchema>;
+
+export const feedbackTypeSchema = z.enum(["suggestion", "bug_report", "complaint"], {
+  required_error: "Выберите тип обращения",
+});
+
+export const feedbackSchema = z.object({
+  name: z.string().trim().min(2, "Имя не короче 2 символов").max(100, "Слишком длинное имя"),
+  email: z.string().trim().email("Некорректный email").max(254, "Слишком длинный email"),
+  feedbackType: feedbackTypeSchema,
+  message: z
+    .string()
+    .trim()
+    .min(10, "Опишите обращение минимум в 10 символов")
+    .max(2000, "Слишком длинное сообщение"),
+});
+
+export type FeedbackInput = z.infer<typeof feedbackSchema>;
