@@ -130,39 +130,47 @@ export default function HomePage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
         <aside className="hidden md:flex md:w-[380px] lg:w-[420px] flex-col border-r border-zinc-200 bg-white">
-          <div className="p-3 space-y-3 border-b border-zinc-100">
+          {/* Search — always visible at top */}
+          <div className="p-3 border-b border-zinc-100 flex-shrink-0">
             <SearchBar value={search} onChange={setSearch} />
-            <FiltersPanel
-              categories={categories}
-              tags={tags}
-              selectedCategory={selectedCategory}
-              selectedTags={selectedTags}
-              verifiedOnly={verifiedOnly}
-              onCategoryChange={setSelectedCategory}
-              onTagToggle={handleTagToggle}
-              onVerifiedToggle={() => setVerifiedOnly(!verifiedOnly)}
-              onReset={handleResetFilters}
-            />
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {loading ? (
-              Array.from({ length: 4 }).map((_, i) => <PlaceCardSkeleton key={i} />)
-            ) : places.length === 0 ? (
-              <EmptyState type="no-results" />
-            ) : (
-              places.map((place) => (
-                <PlaceCardSmall
-                  key={place.id}
-                  place={place}
-                  onClick={() => handlePlaceClick(place)}
-                  active={selectedPlace?.id === place.id}
-                />
-              ))
-            )}
+          {/* Filters + places list — scrollable middle area */}
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            <div className="p-3 border-b border-zinc-100">
+              <FiltersPanel
+                categories={categories}
+                tags={tags}
+                selectedCategory={selectedCategory}
+                selectedTags={selectedTags}
+                verifiedOnly={verifiedOnly}
+                onCategoryChange={setSelectedCategory}
+                onTagToggle={handleTagToggle}
+                onVerifiedToggle={() => setVerifiedOnly(!verifiedOnly)}
+                onReset={handleResetFilters}
+              />
+            </div>
+
+            <div className="p-3 space-y-2">
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => <PlaceCardSkeleton key={i} />)
+              ) : places.length === 0 ? (
+                <EmptyState type="no-results" />
+              ) : (
+                places.map((place) => (
+                  <PlaceCardSmall
+                    key={place.id}
+                    place={place}
+                    onClick={() => handlePlaceClick(place)}
+                    active={selectedPlace?.id === place.id}
+                  />
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="p-3 border-t border-zinc-100">
+          {/* "Add place" button — always pinned at the bottom */}
+          <div className="p-3 border-t border-zinc-100 flex-shrink-0">
             <button
               onClick={handleAddPlace}
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
