@@ -109,11 +109,16 @@ export function getAdminSession(token?: string | null): AdminSessionPayload | nu
   }
 }
 
+function isSecureCookie(): boolean {
+  if (process.env.COOKIE_SECURE === "false") return false;
+  return process.env.NODE_ENV === "production";
+}
+
 export function setAdminSessionCookie(response: NextResponse, email: string) {
   response.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionToken(email), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });
@@ -123,7 +128,7 @@ export function clearAdminSessionCookie(response: NextResponse) {
   response.cookies.set(ADMIN_SESSION_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     path: "/",
     maxAge: 0,
   });
