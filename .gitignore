@@ -36,6 +36,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# local deployment helpers with machine-specific credentials
+/deploy/deploy_remote.py
+/deploy/update_remote.py
+
 # vercel
 .vercel
 

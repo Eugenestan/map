@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Shield } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 export function Header() {
   return (
@@ -11,15 +11,6 @@ export function Header() {
           <MapPin className="h-6 w-6 text-blue-600" />
           <span className="text-lg font-bold text-zinc-900">Русская карта Нячанга</span>
         </Link>
-        <nav className="flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
-          >
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Модерация</span>
-          </Link>
-        </nav>
       </div>
     </header>
   );
