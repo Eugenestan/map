@@ -8,9 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "tsx scripts/db-migrate.ts",
-    "db:seed": "tsx scripts/db-seed.ts",
-    "db:seed:demo": "tsx scripts/db-seed.ts --demo",
+    "db:migrate": "node ./node_modules/tsx/dist/cli.mjs scripts/db-migrate.ts",
+    "db:seed": "node ./node_modules/tsx/dist/cli.mjs scripts/db-seed.ts",
+    "db:seed:demo": "node ./node_modules/tsx/dist/cli.mjs scripts/db-seed.ts --demo",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
