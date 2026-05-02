@@ -10,6 +10,8 @@ COPY . .
 RUN npm run build
 
 FROM node:20-bookworm-slim AS runner
+ARG RELEASE=unknown
+ENV RELEASE=$RELEASE
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

@@ -1,6 +1,20 @@
-import { addPlaceSchema, addReviewSchema, adminUpdatePlaceSchema, adminUpdateReviewSchema } from "@/schemas";
+import type { ZodIssue } from "zod";
+import {
+  addPlaceSchema,
+  addReviewSchema,
+  adminUpdatePlaceSchema,
+  adminUpdateReviewSchema,
+  zodIssuesToUserMessage,
+} from "@/schemas";
 
 describe("schemas", () => {
+  it("zodIssuesToUserMessage replaces English NaN hints", () => {
+    const issues: ZodIssue[] = [
+      { code: "invalid_type", expected: "number", received: "nan", path: ["lat"], message: "Expected number, received nan" },
+    ];
+    expect(zodIssuesToUserMessage(issues)).toBe("Укажите точку на карте");
+  });
+
   it("accepts a valid place payload", () => {
     const result = addPlaceSchema.safeParse({
       title: "Клиника",

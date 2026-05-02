@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, type ZodIssue } from "zod";
 
 /** Без z.number() на «сырых» значениях — иначе Zod даёт англ. «Expected number, received nan». */
 function zGeoCoord(min: number, max: number, message: string) {
@@ -45,6 +45,20 @@ export function normalizePlaceCreateBody(raw: unknown): Record<string, unknown> 
     o[key] = n;
   }
   return o;
+}
+
+/** Сообщение для UI/API: без дублирования, англ. артефакты Zod (NaN и т.п.) — по-русски. */
+export function zodIssuesToUserMessage(issues: ZodIssue[]): string {
+  const map = (msg: string): string => {
+    const lower = msg.toLowerCase();
+    if (lower.includes("nan")) return "Укажите точку на карте";
+    if (lower.includes("expected number") && (lower.includes("undefined") || lower.includes("null"))) {
+      return "Укажите точку на карте";
+    }
+    return msg;
+  };
+  const lines = issues.map((i) => map(i.message)).filter(Boolean);
+  return [...new Set(lines)].join(" ") || "Проверьте данные формы";
 }
 
 export const adminUpdatePlaceSchema = addPlaceSchema.extend({
