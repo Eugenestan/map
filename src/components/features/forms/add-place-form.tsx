@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { addPlaceSchema, type AddPlaceInput } from "@/schemas";
+
+/** Поля формы без координат — lat/lng только из пропсов, иначе RHF + hidden + valueAsNumber даёт NaN. */
+type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
 import type { Category, Tag } from "@/types";
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { MapPin, Check } from "lucide-react";
@@ -14,8 +17,8 @@ interface AddPlaceFormProps {
   onSubmit: (data: AddPlaceInput, meta?: { turnstileToken?: string | null }) => Promise<void>;
   onPickLocation?: () => void;
   /** Сохранить введённые данные перед выбором точки на карте (родитель подставит их в initialValues). */
-  onBeforePickLocation?: (snapshot: Partial<AddPlaceInput>) => void;
-  initialValues?: Partial<AddPlaceInput>;
+  onBeforePickLocation?: (snapshot: Partial<AddPlaceFormFields>) => void;
+  initialValues?: Partial<AddPlaceFormFields>;
   submitLabel?: string;
   successTitle?: string;
   successDescription?: string;
@@ -51,10 +54,8 @@ export function AddPlaceForm({
     getValues,
     watch,
     formState: { errors },
-  } = useForm<AddPlaceInput>({
+  } = useForm<AddPlaceFormFields>({
     defaultValues: {
-      lat,
-      lng,
       title: initialValues?.title || "",
       category_id: initialValues?.category_id || "",
       address_text: initialValues?.address_text || "",
@@ -73,11 +74,6 @@ export function AddPlaceForm({
   }, []);
 
   useEffect(() => {
-    if (typeof lat === "number" && Number.isFinite(lat)) setValue("lat", lat);
-    if (typeof lng === "number" && Number.isFinite(lng)) setValue("lng", lng);
-  }, [lat, lng, setValue]);
-
-  useEffect(() => {
     if (!initialValues) {
       return;
     }
@@ -92,23 +88,13 @@ export function AddPlaceForm({
     setValue("website", initialValues.website || "");
     setValue("telegram", initialValues.telegram || "");
     setValue("working_hours", initialValues.working_hours || "");
-    if (typeof initialValues.lat === "number" && Number.isFinite(initialValues.lat)) {
-      setValue("lat", initialValues.lat);
-    }
-    if (typeof initialValues.lng === "number" && Number.isFinite(initialValues.lng)) {
-      setValue("lng", initialValues.lng);
-    }
   }, [initialValues, setValue]);
 
   const descriptionLen = (watch("description") || "").length;
   const DESC_MAX = 400;
 
   const openLocationPicker = () => {
-    const snap = getValues();
-    const safe: Partial<AddPlaceInput> = { ...snap };
-    if (typeof snap.lat !== "number" || !Number.isFinite(snap.lat)) delete safe.lat;
-    if (typeof snap.lng !== "number" || !Number.isFinite(snap.lng)) delete safe.lng;
-    onBeforePickLocation?.(safe);
+    onBeforePickLocation?.(getValues());
     onPickLocation?.();
   };
 
@@ -120,7 +106,7 @@ export function AddPlaceForm({
     });
   };
 
-  const onValid = async (data: AddPlaceInput) => {
+  const onValid = async (data: AddPlaceFormFields) => {
     setSubmitting(true);
     setSubmitError("");
     try {
@@ -128,13 +114,14 @@ export function AddPlaceForm({
         throw new Error("Подтвердите, что вы не бот");
       }
 
-      const merged = { ...data };
-      if ((typeof merged.lat !== "number" || !Number.isFinite(merged.lat)) && typeof lat === "number" && Number.isFinite(lat)) {
-        merged.lat = lat;
+      const latOk = typeof lat === "number" && Number.isFinite(lat);
+      const lngOk = typeof lng === "number" && Number.isFinite(lng);
+      if (!latOk || !lngOk) {
+        setSubmitError("Укажите точку на карте");
+        return;
       }
-      if ((typeof merged.lng !== "number" || !Number.isFinite(merged.lng)) && typeof lng === "number" && Number.isFinite(lng)) {
-        merged.lng = lng;
-      }
+
+      const merged: AddPlaceInput = { ...data, lat, lng };
 
       // Validate with zod manually for safety
       const parsed = addPlaceSchema.safeParse(merged);
@@ -232,9 +219,6 @@ export function AddPlaceForm({
             Нажмите, чтобы указать точку на карте
           </button>
         )}
-        <input type="hidden" {...register("lat", { required: true, valueAsNumber: true })} />
-        <input type="hidden" {...register("lng", { required: true, valueAsNumber: true })} />
-        {(errors.lat || errors.lng) && <p className="text-xs text-red-500 mt-1">Укажите точку на карте</p>}
       </div>
 
       <div>
