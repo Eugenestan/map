@@ -97,8 +97,6 @@ export function ApprovedPlaceEditor({
             initialValues={{
               title: place.title,
               category_id: place.category_id,
-              lat: place.lat,
-              lng: place.lng,
               address_text: place.address_text || "",
               description: place.description || "",
               tags: place.tags.map((tag) => tag.tag_id),
