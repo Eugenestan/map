@@ -4,12 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { addPlaceSchema, type AddPlaceInput } from "@/schemas";
 import type { Category, Tag } from "@/types";
-
-/** Поля формы без координат — lat/lng только из пропсов, иначе RHF + hidden + valueAsNumber даёт NaN. */
-type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { MapPin, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+/** Поля формы без координат — lat/lng только из пропсов. */
+type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
 
 interface AddPlaceFormProps {
   lat?: number;
@@ -132,7 +132,13 @@ export function AddPlaceForm({
       // Validate with zod manually for safety
       const parsed = addPlaceSchema.safeParse(merged);
       if (!parsed.success) {
-        const msg = parsed.error.errors.map((e) => e.message).join(" ");
+        const msg = parsed.error.errors
+          .map((e) => {
+            const m = e.message;
+            if (/expected number.*nan/i.test(m)) return "Укажите точку на карте";
+            return m;
+          })
+          .join(" ");
         setSubmitError(msg || "Проверьте поля формы");
         return;
       }

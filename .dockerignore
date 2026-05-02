@@ -1,3 +1,6 @@
+# Вложенная копия репозитория (не путать с основным src/)
+map
+
 node_modules
 .next
 coverage
