@@ -102,7 +102,17 @@ export default function HomePage() {
       setPickedLocation(null);
       setPlaceFormDraft({});
       fetchPlaces();
+      return;
     }
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] };
+    };
+    const fieldMsgs = body.details?.fieldErrors
+      ? Object.values(body.details.fieldErrors).flat().filter(Boolean)
+      : [];
+    const parts = [body.error, ...fieldMsgs, ...(body.details?.formErrors || [])].filter(Boolean);
+    throw new Error(parts.length > 0 ? parts.join(" ") : "Не удалось отправить место");
   };
 
   const handleTagToggle = (tagId: string) => {

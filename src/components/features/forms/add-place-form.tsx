@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { addPlaceSchema, type AddPlaceInput } from "@/schemas";
+import type { Category, Tag } from "@/types";
 
 /** Поля формы без координат — lat/lng только из пропсов, иначе RHF + hidden + valueAsNumber даёт NaN. */
 type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
-import type { Category, Tag } from "@/types";
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { MapPin, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -46,6 +46,8 @@ export function AddPlaceForm({
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const coordsRef = useRef({ lat, lng });
+  coordsRef.current = { lat, lng };
 
   const {
     register,
@@ -114,14 +116,18 @@ export function AddPlaceForm({
         throw new Error("Подтвердите, что вы не бот");
       }
 
-      const latOk = typeof lat === "number" && Number.isFinite(lat);
-      const lngOk = typeof lng === "number" && Number.isFinite(lng);
+      const { lat: propLat, lng: propLng } = coordsRef.current;
+      const latOk = typeof propLat === "number" && Number.isFinite(propLat);
+      const lngOk = typeof propLng === "number" && Number.isFinite(propLng);
       if (!latOk || !lngOk) {
         setSubmitError("Укажите точку на карте");
         return;
       }
 
-      const merged: AddPlaceInput = { ...data, lat, lng };
+      const rawFields = { ...data } as Record<string, unknown>;
+      delete rawFields.lat;
+      delete rawFields.lng;
+      const merged: AddPlaceInput = { ...(rawFields as AddPlaceFormFields), lat: propLat, lng: propLng };
 
       // Validate with zod manually for safety
       const parsed = addPlaceSchema.safeParse(merged);
@@ -197,7 +203,7 @@ export function AddPlaceForm({
 
       <div>
         <label className="block text-sm font-medium text-zinc-700 mb-1">Точка на карте *</label>
-        {typeof lat === "number" && typeof lng === "number" && !Number.isNaN(lat) && !Number.isNaN(lng) ? (
+        {typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng) ? (
           <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2 border border-green-200">
             <MapPin className="h-4 w-4" />
             <span>{lat.toFixed(5)}, {lng.toFixed(5)}</span>
