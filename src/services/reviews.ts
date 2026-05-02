@@ -1,6 +1,6 @@
 import { assertDatabaseConfigured, buildInClause, execute, isDatabaseConfigured, normalizeBoolean, normalizeTimestamp, withTransaction } from "@/lib/db";
 import { MOCK_REVIEWS, TAGS } from "@/data/seed";
-import { getDevReviewsByPlace, insertDevReview, listDevReviews, updateDevReview } from "@/lib/dev-store";
+import { getDevReviewsByPlace, getDevStore, insertDevReview, listDevReviews, updateDevReview } from "@/lib/dev-store";
 import type { ReviewWithTags, Tag } from "@/types";
 import { v4 as uuid } from "uuid";
 
@@ -150,8 +150,14 @@ export async function createReview(data: {
   return { id };
 }
 
-export async function likeReview(reviewId: string): Promise<void> {
+/** Одна сессия посетителя — не более одного лайка на отзыв. */
+export async function likeReviewOnce(reviewId: string, sessionId: string): Promise<"liked" | "duplicate"> {
   if (!isDatabaseConfigured()) {
+    const store = getDevStore();
+    const key = `${sessionId}::${reviewId}`;
+    if (store.reviewSessionLikes.has(key)) {
+      return "duplicate";
+    }
     const updated = updateDevReview(reviewId, (review) => ({
       ...review,
       likes_count: review.likes_count + 1,
@@ -160,11 +166,26 @@ export async function likeReview(reviewId: string): Promise<void> {
     if (!updated) {
       throw new Error("Отзыв не найден");
     }
-    return;
+    store.reviewSessionLikes.add(key);
+    return "liked";
   }
 
   assertDatabaseConfigured("DATABASE_URL is not configured. Configure Postgres to save likes.");
-  await execute("UPDATE reviews SET likes_count = likes_count + 1 WHERE id = $1", [reviewId]);
+  return withTransaction(async (sql) => {
+    const inserted = await sql`
+      INSERT INTO review_session_likes (review_id, session_id)
+      VALUES (${reviewId}, ${sessionId})
+      ON CONFLICT (review_id, session_id) DO NOTHING
+      RETURNING review_id
+    `;
+    if (inserted.length === 0) {
+      return "duplicate" as const;
+    }
+    await sql`
+      UPDATE reviews SET likes_count = likes_count + 1, updated_at = NOW() WHERE id = ${reviewId}
+    `;
+    return "liked" as const;
+  });
 }
 
 export async function updateReviewStatus(id: string, status: string): Promise<void> {

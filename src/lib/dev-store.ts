@@ -41,6 +41,7 @@ declare global {
         places: DevPlaceRecord[];
         reviews: DevReviewRecord[];
         reports: Report[];
+        reviewSessionLikes: Set<string>;
       }
     | undefined;
 }
@@ -84,12 +85,15 @@ function createInitialStore() {
     places,
     reviews,
     reports: [],
+    reviewSessionLikes: new Set<string>(),
   };
 }
 
 export function getDevStore() {
   if (!global.__nhatrangDevStore__) {
     global.__nhatrangDevStore__ = createInitialStore();
+  } else if (!global.__nhatrangDevStore__.reviewSessionLikes) {
+    global.__nhatrangDevStore__.reviewSessionLikes = new Set();
   }
 
   return global.__nhatrangDevStore__;

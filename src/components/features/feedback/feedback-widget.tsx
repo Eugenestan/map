@@ -93,7 +93,7 @@ export function FeedbackWidget() {
         type="button"
         aria-label="Обратная связь"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-[100] flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+        className="fixed bottom-28 left-4 z-[1100] flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 md:bottom-6 md:left-auto md:right-6"
       >
         <MessageCircle className="h-7 w-7" aria-hidden />
       </button>

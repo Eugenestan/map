@@ -9,6 +9,27 @@ import { computePlaceTrust } from "@/lib/trust";
 import { MapPin, Phone, Globe, Clock, MessageSquare, Flag, Navigation, Share2, ThumbsUp, Send } from "lucide-react";
 import { cn } from "@/lib/cn";
 
+const REVIEW_LIKES_SESSION_KEY = "nhatrang_review_likes_v1";
+
+function readLikedReviewIdsFromSession(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = sessionStorage.getItem(REVIEW_LIKES_SESSION_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(arr.filter((id): id is string => typeof id === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function persistLikedReviewId(reviewId: string) {
+  const next = readLikedReviewIdsFromSession();
+  next.add(reviewId);
+  sessionStorage.setItem(REVIEW_LIKES_SESSION_KEY, JSON.stringify([...next]));
+}
+
 interface PlaceCardFullProps {
   place: PlaceWithDetails;
   onReport?: () => void;
@@ -18,6 +39,17 @@ interface PlaceCardFullProps {
 export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullProps) {
   const [reviews, setReviews] = useState<ReviewWithTags[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
+  const [likedReviewIds, setLikedReviewIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setLikedReviewIds(readLikedReviewIdsFromSession());
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     fetch(`/api/places/${place.id}/reviews`)
@@ -33,8 +65,21 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
   const isDanger = place.category_id === "cat-10";
 
   const handleLike = async (reviewId: string) => {
-    await fetch(`/api/reviews/${reviewId}/like`, { method: "POST" });
-    setReviews((prev) => prev.map((r) => (r.id === reviewId ? { ...r, likes_count: r.likes_count + 1 } : r)));
+    if (likedReviewIds.has(reviewId)) return;
+    try {
+      const res = await fetch(`/api/reviews/${reviewId}/like`, { method: "POST" });
+      if (res.status === 409) {
+        persistLikedReviewId(reviewId);
+        setLikedReviewIds(readLikedReviewIdsFromSession());
+        return;
+      }
+      if (!res.ok) return;
+      persistLikedReviewId(reviewId);
+      setLikedReviewIds((prev) => new Set(prev).add(reviewId));
+      setReviews((prev) => prev.map((r) => (r.id === reviewId ? { ...r, likes_count: r.likes_count + 1 } : r)));
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleShare = () => {
@@ -159,11 +204,18 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
                   </div>
                 )}
                 <button
+                  type="button"
                   onClick={() => handleLike(review.id)}
-                  className="flex items-center gap-1 mt-2 text-xs text-zinc-400 hover:text-blue-600 transition-colors"
+                  disabled={likedReviewIds.has(review.id)}
+                  className={cn(
+                    "flex items-center gap-1 mt-2 text-xs transition-colors cursor-pointer",
+                    likedReviewIds.has(review.id)
+                      ? "text-zinc-300 cursor-not-allowed"
+                      : "text-zinc-400 hover:text-blue-600",
+                  )}
                 >
                   <ThumbsUp className="h-3 w-3" />
-                  <span>Полезно ({review.likes_count})</span>
+                  <span>{likedReviewIds.has(review.id) ? "Вы отметили" : "Полезно"} ({review.likes_count})</span>
                 </button>
               </div>
             ))}

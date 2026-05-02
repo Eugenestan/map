@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { reportSchema, type ReportInput } from "@/schemas";
 import type { EntityType } from "@/types";
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
@@ -32,10 +33,14 @@ export function ReportForm({ entityType, entityId, entityName, onSuccess }: Repo
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ReportInput>({
+    resolver: zodResolver(reportSchema),
     defaultValues: { entity_type: entityType, entity_id: entityId },
   });
+
+  const reason = useWatch({ control, name: "reason" });
 
   const onValid = async (data: ReportInput) => {
     setSubmitting(true);
@@ -45,19 +50,19 @@ export function ReportForm({ entityType, entityId, entityName, onSuccess }: Repo
         throw new Error("Подтвердите, что вы не бот");
       }
 
-      const parsed = reportSchema.safeParse(data);
-      if (!parsed.success) return;
       const url = entityType === "place"
         ? `/api/places/${entityId}/report`
         : `/api/reviews/${entityId}/report`;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...parsed.data, turnstileToken }),
+        body: JSON.stringify({ ...data, turnstileToken }),
       });
       if (res.ok) {
         setSuccess(true);
-        onSuccess?.();
+      } else {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setSubmitError(body.error || "Не удалось отправить жалобу");
       }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Не удалось отправить жалобу");
@@ -74,9 +79,18 @@ export function ReportForm({ entityType, entityId, entityName, onSuccess }: Repo
         </div>
         <h3 className="text-base font-semibold text-zinc-900">Жалоба отправлена</h3>
         <p className="mt-1 text-sm text-zinc-500">Мы рассмотрим её в ближайшее время.</p>
+        <button
+          type="button"
+          className="mt-6 w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+          onClick={() => onSuccess?.()}
+        >
+          Понятно
+        </button>
       </div>
     );
   }
+
+  const commentRequired = reason === "other";
 
   return (
     <form onSubmit={handleSubmit(onValid)} className="space-y-4">
@@ -105,13 +119,21 @@ export function ReportForm({ entityType, entityId, entityName, onSuccess }: Repo
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">Комментарий</label>
+        <label className="block text-sm font-medium text-zinc-700 mb-1">
+          Комментарий
+          {commentRequired ? " *" : ""}
+        </label>
         <textarea
           {...register("comment")}
           rows={3}
           className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
-          placeholder="Опишите подробнее (необязательно)"
+          placeholder={
+            commentRequired
+              ? "Опишите подробнее (обязательно для «Другое»)"
+              : "Опишите подробнее (необязательно)"
+          }
         />
+        {errors.comment && <p className="text-xs text-red-500 mt-1">{errors.comment.message}</p>}
       </div>
 
       <TurnstileWidget

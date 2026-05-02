@@ -29,8 +29,8 @@ export function AddReviewForm({
   onSubmit,
   initialValues,
   submitLabel = "Отправить отзыв",
-  successTitle = "Отзыв отправлен!",
-  successDescription = "Спасибо! После модерации он появится на странице.",
+  successTitle = "Отзыв отправлен на модерацию",
+  successDescription = "Спасибо! После проверки модератором отзыв появится на странице места.",
   maxTags = 3,
   showSuccessState = true,
   requireBotProtection = true,
@@ -47,6 +47,7 @@ export function AddReviewForm({
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<AddReviewInput>({
     defaultValues: {
@@ -98,13 +99,18 @@ export function AddReviewForm({
       }
 
       const parsed = addReviewSchema.safeParse(data);
-      if (!parsed.success) return;
+      if (!parsed.success) {
+        const msg = parsed.error.errors.map((e) => e.message).join(" ");
+        setSubmitError(msg || "Проверьте поля формы");
+        return;
+      }
       if (onSubmit) {
         await onSubmit(parsed.data, { turnstileToken });
         if (showSuccessState) {
           setSuccess(true);
+        } else {
+          onSuccess?.();
         }
-        onSuccess?.();
         return;
       }
 
@@ -116,8 +122,12 @@ export function AddReviewForm({
       if (response.ok) {
         if (showSuccessState) {
           setSuccess(true);
+        } else {
+          onSuccess?.();
         }
-        onSuccess?.();
+      } else {
+        const result = (await response.json().catch(() => ({}))) as { error?: string };
+        setSubmitError(result.error || "Не удалось сохранить отзыв");
       }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Не удалось сохранить отзыв");
@@ -134,6 +144,26 @@ export function AddReviewForm({
         </div>
         <h3 className="text-base font-semibold text-zinc-900">{successTitle}</h3>
         <p className="mt-1 text-sm text-zinc-500">{successDescription}</p>
+        <button
+          type="button"
+          className="mt-6 w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+          onClick={() => {
+            setSuccess(false);
+            reset({
+              place_id: placeId,
+              text: "",
+              tags: [],
+              visit_period: "",
+              author_name: "",
+            });
+            setSelectedTags([]);
+            setCharCount(0);
+            setTurnstileToken(null);
+            onSuccess?.();
+          }}
+        >
+          Понятно
+        </button>
       </div>
     );
   }

@@ -39,6 +39,7 @@ export default function HomePage() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [pickMode, setPickMode] = useState(false);
   const [pickedLocation, setPickedLocation] = useState<[number, number] | null>(null);
+  const [placeFormDraft, setPlaceFormDraft] = useState<Partial<AddPlaceInput>>({});
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
   const [mobileListOpen, setMobileListOpen] = useState(false);
 
@@ -80,6 +81,7 @@ export default function HomePage() {
 
   const handleAddPlace = () => {
     setPickedLocation(null);
+    setPlaceFormDraft({});
     setActiveModal("add-place");
   };
 
@@ -98,6 +100,7 @@ export default function HomePage() {
     if (res.ok) {
       setPickMode(false);
       setPickedLocation(null);
+      setPlaceFormDraft({});
       fetchPlaces();
     }
   };
@@ -116,6 +119,9 @@ export default function HomePage() {
   };
 
   const closeModal = (cancelPick = true) => {
+    if (activeModal === "add-place" && cancelPick) {
+      setPlaceFormDraft({});
+    }
     setActiveModal(null);
     if (cancelPick && pickMode) {
       setPickMode(false);
@@ -282,7 +288,9 @@ export default function HomePage() {
         <AddPlaceForm
           lat={pickedLocation?.[0]}
           lng={pickedLocation?.[1]}
+          initialValues={placeFormDraft}
           onSubmit={handleAddPlaceSubmit}
+          onBeforePickLocation={(snap) => setPlaceFormDraft(snap)}
           onPickLocation={() => {
             setPickMode(true);
             closeModal(false);

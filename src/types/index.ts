@@ -133,4 +133,6 @@ export interface TrustInfo {
   level: TrustLevel;
   label: string;
   color: string;
+  /** Пояснение к статусу доверия для пользователя */
+  hint: string;
 }

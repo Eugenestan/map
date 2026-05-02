@@ -6,7 +6,7 @@ export const addPlaceSchema = z.object({
   lat: z.number({ required_error: "Укажите точку на карте" }).min(-90).max(90),
   lng: z.number({ required_error: "Укажите точку на карте" }).min(-180).max(180),
   address_text: z.string().max(300, "Слишком длинный адрес").optional(),
-  description: z.string().max(1000, "Слишком длинное описание").optional(),
+  description: z.string().max(400, "Описание не длиннее 400 символов").optional(),
   tags: z.array(z.string()).max(10, "Максимум 10 тегов").optional(),
   phone: z.string().max(50).optional(),
   website: z.string().max(300).optional(),
@@ -40,14 +40,26 @@ export const adminUpdateReviewSchema = addReviewSchema.omit({ place_id: true }).
 
 export type AdminUpdateReviewInput = z.infer<typeof adminUpdateReviewSchema>;
 
-export const reportSchema = z.object({
-  entity_type: z.enum(["place", "review"]),
-  entity_id: z.string().min(1),
-  reason: z.enum(["wrong_info", "spam", "offensive", "duplicate", "nonexistent", "other"], {
-    required_error: "Выберите причину",
-  }),
-  comment: z.string().max(500, "Максимум 500 символов").optional(),
-});
+export const reportSchema = z
+  .object({
+    entity_type: z.enum(["place", "review"]),
+    entity_id: z.string().min(1),
+    reason: z.enum(["wrong_info", "spam", "offensive", "duplicate", "nonexistent", "other"], {
+      required_error: "Выберите причину",
+    }),
+    comment: z.string().max(500, "Максимум 500 символов").optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.reason !== "other") return;
+    const trimmed = data.comment?.trim() ?? "";
+    if (trimmed.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Укажите подробности в комментарии",
+        path: ["comment"],
+      });
+    }
+  });
 
 export type ReportInput = z.infer<typeof reportSchema>;
 

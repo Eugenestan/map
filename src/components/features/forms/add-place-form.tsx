@@ -13,6 +13,8 @@ interface AddPlaceFormProps {
   lng?: number;
   onSubmit: (data: AddPlaceInput, meta?: { turnstileToken?: string | null }) => Promise<void>;
   onPickLocation?: () => void;
+  /** Сохранить введённые данные перед выбором точки на карте (родитель подставит их в initialValues). */
+  onBeforePickLocation?: (snapshot: Partial<AddPlaceInput>) => void;
   initialValues?: Partial<AddPlaceInput>;
   submitLabel?: string;
   successTitle?: string;
@@ -26,6 +28,7 @@ export function AddPlaceForm({
   lng,
   onSubmit,
   onPickLocation,
+  onBeforePickLocation,
   initialValues,
   submitLabel = "Отправить на модерацию",
   successTitle = "Место отправлено!",
@@ -45,6 +48,8 @@ export function AddPlaceForm({
     register,
     handleSubmit,
     setValue,
+    getValues,
+    watch,
     formState: { errors },
   } = useForm<AddPlaceInput>({
     defaultValues: {
@@ -91,6 +96,14 @@ export function AddPlaceForm({
     if (initialValues.lng !== undefined) setValue("lng", initialValues.lng);
   }, [initialValues, setValue]);
 
+  const descriptionLen = (watch("description") || "").length;
+  const DESC_MAX = 400;
+
+  const openLocationPicker = () => {
+    onBeforePickLocation?.(getValues());
+    onPickLocation?.();
+  };
+
   const toggleTag = (tagId: string) => {
     setSelectedTags((prev) => {
       const next = prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId];
@@ -109,7 +122,11 @@ export function AddPlaceForm({
 
       // Validate with zod manually for safety
       const parsed = addPlaceSchema.safeParse(data);
-      if (!parsed.success) return;
+      if (!parsed.success) {
+        const msg = parsed.error.errors.map((e) => e.message).join(" ");
+        setSubmitError(msg || "Проверьте поля формы");
+        return;
+      }
       await onSubmit(parsed.data, { turnstileToken });
       if (showSuccessState) {
         setSuccess(true);
@@ -177,17 +194,23 @@ export function AddPlaceForm({
 
       <div>
         <label className="block text-sm font-medium text-zinc-700 mb-1">Точка на карте *</label>
-        {lat && lng ? (
+        {typeof lat === "number" && typeof lng === "number" && !Number.isNaN(lat) && !Number.isNaN(lng) ? (
           <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2 border border-green-200">
             <MapPin className="h-4 w-4" />
             <span>{lat.toFixed(5)}, {lng.toFixed(5)}</span>
-            <button type="button" onClick={onPickLocation} className="ml-auto text-xs underline text-green-700">Изменить</button>
+            <button
+              type="button"
+              onClick={openLocationPicker}
+              className="ml-auto text-xs underline text-green-700 cursor-pointer"
+            >
+              Изменить
+            </button>
           </div>
         ) : (
           <button
             type="button"
-            onClick={onPickLocation}
-            className="w-full rounded-lg border-2 border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            onClick={openLocationPicker}
+            className="w-full rounded-lg border-2 border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 hover:border-blue-400 hover:text-blue-600 transition-colors cursor-pointer"
           >
             <MapPin className="h-5 w-5 mx-auto mb-1" />
             Нажмите, чтобы указать точку на карте
@@ -208,13 +231,20 @@ export function AddPlaceForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">Описание</label>
+        <div className="flex justify-between items-baseline mb-1">
+          <label className="block text-sm font-medium text-zinc-700">Описание</label>
+          <span className={cn("text-xs tabular-nums", descriptionLen > DESC_MAX ? "text-red-500" : "text-zinc-400")}>
+            {descriptionLen}/{DESC_MAX}
+          </span>
+        </div>
         <textarea
-          {...register("description")}
+          {...register("description", { maxLength: { value: DESC_MAX, message: `Максимум ${DESC_MAX} символов` } })}
           rows={3}
+          maxLength={DESC_MAX}
           className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
           placeholder="Краткое описание места"
         />
+        {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>}
       </div>
 
       <div>
