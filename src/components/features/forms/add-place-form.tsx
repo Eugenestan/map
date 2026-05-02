@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { addPlaceSchema, type AddPlaceInput } from "@/schemas";
+import type { AddPlaceInput } from "@/schemas";
 import type { Category, Tag } from "@/types";
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { MapPin, Check } from "lucide-react";
@@ -124,25 +124,40 @@ export function AddPlaceForm({
         return;
       }
 
-      const rawFields = { ...data } as Record<string, unknown>;
-      delete rawFields.lat;
-      delete rawFields.lng;
-      const merged: AddPlaceInput = { ...(rawFields as AddPlaceFormFields), lat: propLat, lng: propLng };
-
-      // Validate with zod manually for safety
-      const parsed = addPlaceSchema.safeParse(merged);
-      if (!parsed.success) {
-        const msg = parsed.error.errors
-          .map((e) => {
-            const m = e.message;
-            if (/expected number.*nan/i.test(m)) return "Укажите точку на карте";
-            return m;
-          })
-          .join(" ");
-        setSubmitError(msg || "Проверьте поля формы");
+      const title = (data.title ?? "").trim();
+      if (title.length < 2) {
+        setSubmitError("Название должно быть не менее 2 символов");
         return;
       }
-      await onSubmit(parsed.data, { turnstileToken });
+      const category_id = (data.category_id ?? "").trim();
+      if (!category_id) {
+        setSubmitError("Выберите категорию");
+        return;
+      }
+      const description = (data.description ?? "").trim();
+      if (description.length > 400) {
+        setSubmitError("Описание не длиннее 400 символов");
+        return;
+      }
+      const tags = Array.isArray(data.tags) ? data.tags.filter((t): t is string => typeof t === "string") : [];
+      const opt = (s: string | undefined) => {
+        const t = (s ?? "").trim();
+        return t.length > 0 ? t : undefined;
+      };
+      const payload: AddPlaceInput = {
+        title,
+        category_id,
+        lat: propLat,
+        lng: propLng,
+        address_text: opt(data.address_text),
+        description: description.length > 0 ? description : undefined,
+        tags: tags.length > 0 ? tags : undefined,
+        phone: opt(data.phone),
+        website: opt(data.website),
+        telegram: opt(data.telegram),
+        working_hours: opt(data.working_hours),
+      };
+      await onSubmit(payload, { turnstileToken });
       if (showSuccessState) {
         setSuccess(true);
       }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { adminUpdatePlaceSchema } from "@/schemas";
+import { adminUpdatePlaceSchema, normalizePlaceCreateBody } from "@/schemas";
 import { getPlaceById, updatePlace } from "@/services/places";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -32,7 +32,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id } = await params;
     const body = await request.json();
-    const parsed = adminUpdatePlaceSchema.safeParse(body);
+    const parsed = adminUpdatePlaceSchema.safeParse(normalizePlaceCreateBody(body));
     if (!parsed.success) {
       return NextResponse.json({ error: "Ошибка валидации", details: parsed.error.flatten() }, { status: 400 });
     }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPlaces, createPlace } from "@/services/places";
-import { addPlaceSchema } from "@/schemas";
+import { addPlaceSchema, normalizePlaceCreateBody } from "@/schemas";
 import { parseSearchQuery } from "@/lib/search-parser";
 import { checkRateLimit, createRateLimitResponse, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstileOrResponse } from "@/lib/turnstile";
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       return turnstileResponse;
     }
 
-    const parsed = addPlaceSchema.safeParse(payload);
+    const parsed = addPlaceSchema.safeParse(normalizePlaceCreateBody(payload));
     if (!parsed.success) {
       return NextResponse.json({ error: "Ошибка валидации", details: parsed.error.flatten() }, { status: 400 });
     }

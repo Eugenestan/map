@@ -25,6 +25,28 @@ export const addPlaceSchema = z.object({
 
 export type AddPlaceInput = z.infer<typeof addPlaceSchema>;
 
+/** Нормализация JSON POST /api/places: lat/lng из строк/null без NaN перед addPlaceSchema. */
+export function normalizePlaceCreateBody(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {};
+  }
+  const o = { ...(raw as Record<string, unknown>) };
+  for (const key of ["lat", "lng"] as const) {
+    const v = o[key];
+    if (v === "" || v === null || v === undefined) {
+      delete o[key];
+      continue;
+    }
+    const n = typeof v === "number" ? v : Number(v);
+    if (!Number.isFinite(n)) {
+      delete o[key];
+      continue;
+    }
+    o[key] = n;
+  }
+  return o;
+}
+
 export const adminUpdatePlaceSchema = addPlaceSchema.extend({
   status: z.enum(["approved", "hidden", "archived"]),
   is_verified: z.boolean().optional(),
