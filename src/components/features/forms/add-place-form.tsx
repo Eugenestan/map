@@ -73,8 +73,8 @@ export function AddPlaceForm({
   }, []);
 
   useEffect(() => {
-    if (lat !== undefined) setValue("lat", lat);
-    if (lng !== undefined) setValue("lng", lng);
+    if (typeof lat === "number" && Number.isFinite(lat)) setValue("lat", lat);
+    if (typeof lng === "number" && Number.isFinite(lng)) setValue("lng", lng);
   }, [lat, lng, setValue]);
 
   useEffect(() => {
@@ -92,15 +92,23 @@ export function AddPlaceForm({
     setValue("website", initialValues.website || "");
     setValue("telegram", initialValues.telegram || "");
     setValue("working_hours", initialValues.working_hours || "");
-    if (initialValues.lat !== undefined) setValue("lat", initialValues.lat);
-    if (initialValues.lng !== undefined) setValue("lng", initialValues.lng);
+    if (typeof initialValues.lat === "number" && Number.isFinite(initialValues.lat)) {
+      setValue("lat", initialValues.lat);
+    }
+    if (typeof initialValues.lng === "number" && Number.isFinite(initialValues.lng)) {
+      setValue("lng", initialValues.lng);
+    }
   }, [initialValues, setValue]);
 
   const descriptionLen = (watch("description") || "").length;
   const DESC_MAX = 400;
 
   const openLocationPicker = () => {
-    onBeforePickLocation?.(getValues());
+    const snap = getValues();
+    const safe: Partial<AddPlaceInput> = { ...snap };
+    if (typeof snap.lat !== "number" || !Number.isFinite(snap.lat)) delete safe.lat;
+    if (typeof snap.lng !== "number" || !Number.isFinite(snap.lng)) delete safe.lng;
+    onBeforePickLocation?.(safe);
     onPickLocation?.();
   };
 
@@ -120,8 +128,16 @@ export function AddPlaceForm({
         throw new Error("Подтвердите, что вы не бот");
       }
 
+      const merged = { ...data };
+      if ((typeof merged.lat !== "number" || !Number.isFinite(merged.lat)) && typeof lat === "number" && Number.isFinite(lat)) {
+        merged.lat = lat;
+      }
+      if ((typeof merged.lng !== "number" || !Number.isFinite(merged.lng)) && typeof lng === "number" && Number.isFinite(lng)) {
+        merged.lng = lng;
+      }
+
       // Validate with zod manually for safety
-      const parsed = addPlaceSchema.safeParse(data);
+      const parsed = addPlaceSchema.safeParse(merged);
       if (!parsed.success) {
         const msg = parsed.error.errors.map((e) => e.message).join(" ");
         setSubmitError(msg || "Проверьте поля формы");

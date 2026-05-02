@@ -1,10 +1,20 @@
 import { z } from "zod";
 
+/** RHF + valueAsNumber даёт NaN для пустых hidden; черновик из getValues() тоже может вернуть NaN. */
+function zFiniteCoord(min: number, max: number, requiredMessage: string) {
+  return z.preprocess((v) => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    const n = typeof v === "number" ? v : Number(v);
+    if (typeof n === "number" && Number.isFinite(n)) return n;
+    return undefined;
+  }, z.number({ required_error: requiredMessage, invalid_type_error: requiredMessage }).min(min).max(max));
+}
+
 export const addPlaceSchema = z.object({
   title: z.string().min(2, "Название должно быть не менее 2 символов").max(200, "Слишком длинное название"),
   category_id: z.string().min(1, "Выберите категорию"),
-  lat: z.number({ required_error: "Укажите точку на карте" }).min(-90).max(90),
-  lng: z.number({ required_error: "Укажите точку на карте" }).min(-180).max(180),
+  lat: zFiniteCoord(-90, 90, "Укажите точку на карте"),
+  lng: zFiniteCoord(-180, 180, "Укажите точку на карте"),
   address_text: z.string().max(300, "Слишком длинный адрес").optional(),
   description: z.string().max(400, "Описание не длиннее 400 символов").optional(),
   tags: z.array(z.string()).max(10, "Максимум 10 тегов").optional(),
