@@ -46,6 +46,8 @@ export interface Place {
   working_hours: string | null;
   is_verified: boolean;
   last_verified_at: string | null;
+  /** Модератор отметил место в подборке «Рекомендуют» (подсветка на карте). */
+  admin_recommended: boolean;
   source_type: string | null;
   duplicate_of: string | null;
 }

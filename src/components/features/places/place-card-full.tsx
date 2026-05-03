@@ -108,8 +108,13 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
           </div>
         </div>
 
-        <div className="mt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <TrustBadge trust={trust} />
+          {place.admin_recommended && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-amber-200/80">
+              ⭐ Рекомендуют
+            </span>
+          )}
         </div>
 
         {place.address_text && (
@@ -195,7 +200,9 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
                     {review.visit_period || new Date(review.created_at).toLocaleDateString("ru")}
                   </span>
                 </div>
-                <p className="text-sm text-zinc-600 leading-relaxed">{review.text}</p>
+                {review.text?.trim() ? (
+                  <p className="text-sm text-zinc-600 leading-relaxed">{review.text}</p>
+                ) : null}
                 {review.tags && review.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {review.tags.map((t) => (

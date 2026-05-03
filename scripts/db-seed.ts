@@ -56,9 +56,9 @@ async function main() {
       await db.unsafe(`
         INSERT INTO places (
           id, title, slug, category_id, status, description, address_text, lat, lng,
-          phone, website, telegram, working_hours, is_verified, last_verified_at
+          phone, website, telegram, working_hours, is_verified, last_verified_at, admin_recommended
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         ON CONFLICT (id) DO NOTHING
       `, [
         place.id,
@@ -76,6 +76,7 @@ async function main() {
         place.working_hours,
         place.is_verified,
         place.last_verified_at,
+        (place as { admin_recommended?: boolean }).admin_recommended === true,
       ]);
 
       for (const tagId of place.tags) {

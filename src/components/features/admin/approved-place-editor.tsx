@@ -25,6 +25,7 @@ export function ApprovedPlaceEditor({
 }: ApprovedPlaceEditorProps) {
   const [status, setStatus] = useState<PlaceStatus>("approved");
   const [isVerified, setIsVerified] = useState(false);
+  const [adminRecommended, setAdminRecommended] = useState(false);
   const [reviews, setReviews] = useState<ReviewWithTags[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [selectedReview, setSelectedReview] = useState<ReviewWithTags | null>(null);
@@ -53,6 +54,7 @@ export function ApprovedPlaceEditor({
     if (place) {
       setStatus(place.status);
       setIsVerified(place.is_verified);
+      setAdminRecommended(place.admin_recommended);
       void loadReviews();
     }
   }, [loadReviews, place]);
@@ -78,15 +80,26 @@ export function ApprovedPlaceEditor({
                 <option value="archived">В архиве</option>
               </select>
             </div>
-            <label className="flex items-center gap-2 self-end rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
-              <input
-                type="checkbox"
-                checked={isVerified}
-                onChange={(event) => setIsVerified(event.target.checked)}
-                className="h-4 w-4 rounded border-zinc-300 text-blue-600"
-              />
-              Подтверждено модератором
-            </label>
+            <div className="flex flex-col gap-2 self-end md:items-end">
+              <label className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={isVerified}
+                  onChange={(event) => setIsVerified(event.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-300 text-blue-600"
+                />
+                Подтверждено модератором
+              </label>
+              <label className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-900">
+                <input
+                  type="checkbox"
+                  checked={adminRecommended}
+                  onChange={(event) => setAdminRecommended(event.target.checked)}
+                  className="h-4 w-4 rounded border-amber-400 text-amber-600"
+                />
+                ⭐ Рекомендуют (подсветка на карте)
+              </label>
+            </div>
           </div>
 
           <AddPlaceForm
@@ -111,7 +124,7 @@ export function ApprovedPlaceEditor({
               const response = await fetch(`/api/admin/places/${place.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...data, status, is_verified: isVerified }),
+                body: JSON.stringify({ ...data, status, is_verified: isVerified, admin_recommended: adminRecommended }),
               });
 
               if (response.status === 401) {
@@ -157,7 +170,7 @@ export function ApprovedPlaceEditor({
                         Редактировать
                       </button>
                     </div>
-                    <p className="text-sm text-zinc-700">{review.text}</p>
+                    {review.text?.trim() ? <p className="text-sm text-zinc-700">{review.text}</p> : null}
                     {review.tags.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {review.tags.map((tag) => (

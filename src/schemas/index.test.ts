@@ -68,6 +68,26 @@ describe("schemas", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts review with tags only (no text)", () => {
+    const result = addReviewSchema.safeParse({
+      place_id: "place-1",
+      text: "",
+      tags: ["tag-2"],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects review without tags", () => {
+    const result = addReviewSchema.safeParse({
+      place_id: "place-1",
+      text: "Только текст без тегов",
+      tags: [],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects review with too many tags", () => {
     const result = addReviewSchema.safeParse({
       place_id: "place-1",

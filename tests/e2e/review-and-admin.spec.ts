@@ -11,6 +11,7 @@ test("user can submit a review in anti-bot bypass mode", async ({ request }) => 
   const response = await request.post(`/api/places/${firstPlaceId}/reviews`, {
     data: {
       text: "Проверка smoke-сценария через Playwright.",
+      tags: ["tag-2"],
       author_name: "Playwright",
       turnstileToken: null,
     },

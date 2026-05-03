@@ -18,6 +18,7 @@ import { PlaceCardSkeleton } from "@/components/ui/loading-skeleton";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { AddPlaceInput } from "@/schemas";
 import { Plus, SlidersHorizontal, List, X } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 const MapView = dynamic(
   () => import("@/components/features/map/map-view").then((m) => m.MapView),
@@ -35,6 +36,8 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [hasReviewsOnly, setHasReviewsOnly] = useState(false);
+  const [recommendedLayerOn, setRecommendedLayerOn] = useState(true);
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithDetails | null>(null);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [pickMode, setPickMode] = useState(false);
@@ -57,6 +60,7 @@ export default function HomePage() {
     if (selectedCategory) params.set("category", selectedCategory);
     if (selectedTags.length > 0) params.set("tags", selectedTags.join(","));
     if (verifiedOnly) params.set("verifiedOnly", "true");
+    if (hasReviewsOnly) params.set("hasReviewsOnly", "true");
 
     try {
       const res = await fetch(`/api/places?${params}`);
@@ -67,7 +71,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, selectedCategory, selectedTags, verifiedOnly]);
+  }, [debouncedSearch, selectedCategory, selectedTags, verifiedOnly, hasReviewsOnly]);
 
   useEffect(() => {
     fetchPlaces();
@@ -125,6 +129,7 @@ export default function HomePage() {
     setSelectedCategory(null);
     setSelectedTags([]);
     setVerifiedOnly(false);
+    setHasReviewsOnly(false);
     setSearch("");
   };
 
@@ -160,9 +165,11 @@ export default function HomePage() {
                 selectedCategory={selectedCategory}
                 selectedTags={selectedTags}
                 verifiedOnly={verifiedOnly}
+                hasReviewsOnly={hasReviewsOnly}
                 onCategoryChange={setSelectedCategory}
                 onTagToggle={handleTagToggle}
                 onVerifiedToggle={() => setVerifiedOnly(!verifiedOnly)}
+                onHasReviewsToggle={() => setHasReviewsOnly(!hasReviewsOnly)}
                 onReset={handleResetFilters}
               />
             </div>
@@ -199,8 +206,22 @@ export default function HomePage() {
         {/* Map area */}
         <div className="flex-1 relative">
           {/* Mobile top bar */}
-          <div className="md:hidden absolute top-3 left-3 right-3 z-[1000]">
+          <div className="md:hidden absolute top-3 left-3 right-3 z-[1000] flex flex-col gap-2">
             <SearchBar value={search} onChange={setSearch} className="shadow-lg" />
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => setRecommendedLayerOn(!recommendedLayerOn)}
+                className={cn(
+                  "text-xs font-medium rounded-full border px-3 py-1.5 shadow-md backdrop-blur-sm transition-colors",
+                  recommendedLayerOn
+                    ? "border-amber-300 bg-amber-100/95 text-amber-900"
+                    : "border-zinc-200 bg-white/95 text-zinc-500",
+                )}
+              >
+                ⭐ Рекомендуют
+              </button>
+            </div>
           </div>
 
           <MapView
@@ -210,8 +231,22 @@ export default function HomePage() {
             onPick={handlePick}
             pickedLocation={pickedLocation}
             flyTo={flyTo}
+            highlightRecommended={recommendedLayerOn}
             className="w-full h-full"
           />
+
+          <div className="hidden md:flex absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] items-center gap-2 rounded-full border border-zinc-200 bg-white/95 px-3 py-2 shadow-md backdrop-blur-sm">
+            <button
+              type="button"
+              onClick={() => setRecommendedLayerOn(!recommendedLayerOn)}
+              className={cn(
+                "text-xs font-medium rounded-full px-3 py-1.5 transition-colors",
+                recommendedLayerOn ? "bg-amber-100 text-amber-900 ring-1 ring-amber-300/60" : "text-zinc-500 hover:bg-zinc-100",
+              )}
+            >
+              ⭐ Рекомендуют
+            </button>
+          </div>
 
           {/* Mobile FAB: safe-area + запас от нижней панели браузера / home indicator */}
           <div
@@ -281,9 +316,11 @@ export default function HomePage() {
           selectedCategory={selectedCategory}
           selectedTags={selectedTags}
           verifiedOnly={verifiedOnly}
+          hasReviewsOnly={hasReviewsOnly}
           onCategoryChange={setSelectedCategory}
           onTagToggle={handleTagToggle}
           onVerifiedToggle={() => setVerifiedOnly(!verifiedOnly)}
+          onHasReviewsToggle={() => setHasReviewsOnly(!hasReviewsOnly)}
           onReset={handleResetFilters}
         />
       </BottomSheet>

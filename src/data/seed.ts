@@ -66,6 +66,7 @@ export const MOCK_PLACES = [
     working_hours: "Пн-Сб 8:00-18:00",
     is_verified: true,
     last_verified_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    admin_recommended: true,
     tags: ["tag-1", "tag-2", "tag-17"],
   },
   {

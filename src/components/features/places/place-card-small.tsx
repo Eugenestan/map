@@ -27,6 +27,7 @@ export function PlaceCardSmall({ place, onClick, active }: PlaceCardSmallProps) 
         <span className="text-xl flex-shrink-0 mt-0.5">{place.category.icon}</span>
         <div className="min-w-0 flex-1">
           <h3 className={cn("font-semibold text-sm leading-tight truncate", isDanger ? "text-red-800" : "text-zinc-900")}>
+            {place.admin_recommended && <span className="mr-1" title="Рекомендуют">⭐</span>}
             {place.title}
           </h3>
           <p className="text-xs text-zinc-500 mt-0.5">{place.category.name_ru}</p>

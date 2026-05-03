@@ -103,19 +103,20 @@ export async function getReviewsByPlace(placeId: string, includeAllStatuses = fa
 
 export async function createReview(data: {
   place_id: string;
-  text: string;
+  text?: string;
   tags?: string[];
   visit_period?: string;
   author_name?: string;
 }): Promise<{ id: string }> {
   const id = uuid();
+  const text = (data.text ?? "").trim();
 
   if (!isDatabaseConfigured()) {
     const now = new Date().toISOString();
     insertDevReview({
       id,
       place_id: data.place_id,
-      text: data.text,
+      text,
       author_name: data.author_name || null,
       visit_period: data.visit_period || null,
       status: "pending",
@@ -134,7 +135,7 @@ export async function createReview(data: {
     await sql.unsafe(`
       INSERT INTO reviews (id, place_id, author_name, status, text, visit_period)
       VALUES ($1, $2, $3, 'pending', $4, $5)
-    `, [id, data.place_id, data.author_name || null, data.text, data.visit_period || null]);
+    `, [id, data.place_id, data.author_name || null, text, data.visit_period || null]);
 
     if (data.tags?.length) {
       for (const tagId of data.tags) {

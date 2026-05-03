@@ -50,6 +50,7 @@ export function AdminReviewEditor({
           placeId={review.place_id}
           placeName={placeName}
           requireBotProtection={false}
+          relaxTagRequirement
           initialValues={{
             text: review.text,
             tags: review.tags.map((tag) => tag.id),

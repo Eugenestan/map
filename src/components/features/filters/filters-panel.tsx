@@ -12,9 +12,11 @@ interface FiltersPanelProps {
   selectedCategory: string | null;
   selectedTags: string[];
   verifiedOnly: boolean;
+  hasReviewsOnly: boolean;
   onCategoryChange: (id: string | null) => void;
   onTagToggle: (id: string) => void;
   onVerifiedToggle: () => void;
+  onHasReviewsToggle: () => void;
   onReset: () => void;
   className?: string;
 }
@@ -25,13 +27,15 @@ export function FiltersPanel({
   selectedCategory,
   selectedTags,
   verifiedOnly,
+  hasReviewsOnly,
   onCategoryChange,
   onTagToggle,
   onVerifiedToggle,
+  onHasReviewsToggle,
   onReset,
   className,
 }: FiltersPanelProps) {
-  const hasActiveFilters = selectedCategory || selectedTags.length > 0 || verifiedOnly;
+  const hasActiveFilters = selectedCategory || selectedTags.length > 0 || verifiedOnly || hasReviewsOnly;
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     categories: true,
     language: true,
@@ -113,8 +117,9 @@ export function FiltersPanel({
         isOpen={openSections.verified}
         onToggle={() => toggleSection("verified")}
       >
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <FilterChip label="Только проверенные" active={verifiedOnly} onClick={onVerifiedToggle} />
+          <FilterChip label="Только с отзывами" active={hasReviewsOnly} onClick={onHasReviewsToggle} />
         </div>
       </AccordionSection>
     </div>

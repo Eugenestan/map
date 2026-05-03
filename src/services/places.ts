@@ -13,11 +13,12 @@ function slugify(text: string): string {
     .trim();
 }
 
-interface PlaceBaseRow extends Omit<Place, "is_verified" | "last_verified_at" | "created_at" | "updated_at"> {
+interface PlaceBaseRow extends Omit<Place, "is_verified" | "last_verified_at" | "created_at" | "updated_at" | "admin_recommended"> {
   created_at: string | Date;
   updated_at: string | Date;
   is_verified: boolean;
   last_verified_at: string | Date | null;
+  admin_recommended: boolean;
   cat_id: string;
   cat_slug: string;
   cat_name: string;
@@ -153,6 +154,7 @@ function getMockPlacesCollection(includeAllReviewStatuses = false): PlaceWithDet
       working_hours: place.working_hours,
       is_verified: place.is_verified,
       last_verified_at: place.last_verified_at,
+      admin_recommended: !!(place as { admin_recommended?: boolean }).admin_recommended,
       source_type: null,
       duplicate_of: null,
       category,
@@ -290,6 +292,7 @@ async function hydratePlaces(rows: PlaceBaseRow[], includeAllReviewStatuses = fa
     working_hours: row.working_hours,
     is_verified: normalizeBoolean(row.is_verified),
     last_verified_at: normalizeTimestamp(row.last_verified_at),
+    admin_recommended: normalizeBoolean(row.admin_recommended),
     source_type: row.source_type,
     duplicate_of: row.duplicate_of,
     category: mapPlaceCategory(row),
@@ -427,6 +430,7 @@ export async function createPlace(data: {
       working_hours: data.working_hours || null,
       is_verified: false,
       last_verified_at: null,
+      admin_recommended: false,
       tags: [...(data.tags || [])],
       created_at: now,
       updated_at: now,
@@ -517,6 +521,7 @@ export async function updatePlace(id: string, data: {
   working_hours?: string;
   status: "approved" | "hidden" | "archived";
   is_verified?: boolean;
+  admin_recommended?: boolean;
 }): Promise<void> {
   const slug = slugify(data.title) || id;
 
@@ -537,6 +542,7 @@ export async function updatePlace(id: string, data: {
       working_hours: data.working_hours || null,
       is_verified: !!data.is_verified,
       last_verified_at: data.is_verified ? new Date().toISOString() : null,
+      admin_recommended: data.admin_recommended !== undefined ? !!data.admin_recommended : place.admin_recommended,
       tags: [...(data.tags || [])],
       updated_at: new Date().toISOString(),
     }));
@@ -553,8 +559,9 @@ export async function updatePlace(id: string, data: {
     await sql.unsafe(`
       UPDATE places
       SET title = $1, slug = $2, category_id = $3, status = $4, description = $5, address_text = $6, lat = $7, lng = $8,
-          phone = $9, website = $10, telegram = $11, working_hours = $12, is_verified = $13, updated_at = NOW()
-      WHERE id = $14
+          phone = $9, website = $10, telegram = $11, working_hours = $12, is_verified = $13,
+          admin_recommended = COALESCE($14, admin_recommended), updated_at = NOW()
+      WHERE id = $15
     `, [
       data.title,
       slug,
@@ -569,6 +576,7 @@ export async function updatePlace(id: string, data: {
       data.telegram || null,
       data.working_hours || null,
       !!data.is_verified,
+      data.admin_recommended !== undefined ? !!data.admin_recommended : null,
       id,
     ]);
 

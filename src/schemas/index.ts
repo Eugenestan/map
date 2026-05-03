@@ -70,23 +70,52 @@ export function zodIssuesToUserMessage(issues: ZodIssue[]): string {
 export const adminUpdatePlaceSchema = addPlaceSchema.extend({
   status: z.enum(["approved", "hidden", "archived"]),
   is_verified: z.boolean().optional(),
+  admin_recommended: z.boolean().optional(),
 });
 
 export type AdminUpdatePlaceInput = z.infer<typeof adminUpdatePlaceSchema>;
 
-export const addReviewSchema = z.object({
+function refineReviewGuestTags(data: { tags: string[] }, ctx: z.RefinementCtx) {
+  if (data.tags.length < 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Выберите хотя бы один тег",
+      path: ["tags"],
+    });
+  }
+}
+
+export const addReviewSchema = z
+  .object({
+    place_id: z.string().min(1),
+    text: z.string().max(500, "Максимум 500 символов").default(""),
+    tags: z.array(z.string()).max(3, "Максимум 3 тега").default([]),
+    visit_period: z.string().max(50).optional(),
+    author_name: z.string().max(50).optional(),
+  })
+  .superRefine(refineReviewGuestTags);
+
+export type AddReviewInput = z.infer<typeof addReviewSchema>;
+
+/** Та же форма отзыва без обязательных тегов — для модераторского редактирования. */
+export const addReviewStaffFormSchema = z.object({
   place_id: z.string().min(1),
-  text: z.string().min(5, "Отзыв должен быть не менее 5 символов").max(500, "Максимум 500 символов"),
-  tags: z.array(z.string()).max(3, "Максимум 3 тега").optional(),
+  text: z.string().max(500, "Максимум 500 символов").default(""),
+  tags: z.array(z.string()).max(3, "Максимум 3 тега").default([]),
   visit_period: z.string().max(50).optional(),
   author_name: z.string().max(50).optional(),
 });
 
-export type AddReviewInput = z.infer<typeof addReviewSchema>;
+export type AddReviewStaffFormInput = z.infer<typeof addReviewStaffFormSchema>;
 
-export const adminUpdateReviewSchema = addReviewSchema.omit({ place_id: true }).extend({
-  status: z.enum(["approved", "hidden", "rejected", "pending"]),
-});
+export const adminUpdateReviewSchema = z
+  .object({
+    text: z.string().max(500, "Максимум 500 символов").default(""),
+    tags: z.array(z.string()).max(3, "Максимум 3 тега").optional(),
+    visit_period: z.string().max(50).optional(),
+    author_name: z.string().max(50).optional(),
+    status: z.enum(["approved", "hidden", "rejected", "pending"]),
+  });
 
 export type AdminUpdateReviewInput = z.infer<typeof adminUpdateReviewSchema>;
 

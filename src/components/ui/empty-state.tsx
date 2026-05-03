@@ -23,7 +23,7 @@ const CONFIG = {
   "no-reviews": {
     icon: MessageSquare,
     title: "Отзывов пока нет",
-    description: "Будьте первым, кто оставит отзыв об этом месте!",
+    description: "Помоги другим — стоит идти или нет",
     action: "Оставить первый отзыв",
   },
 };

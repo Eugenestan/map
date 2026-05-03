@@ -23,6 +23,7 @@ describe("POST /api/places/[id]/reviews", () => {
       method: "POST",
       body: JSON.stringify({
         text: "Отличное место",
+        tags: ["tag-2"],
         author_name: "Тест",
       }),
       headers: { "Content-Type": "application/json" },
@@ -36,7 +37,18 @@ describe("POST /api/places/[id]/reviews", () => {
   it("returns 400 for invalid review payload", async () => {
     const request = new NextRequest("http://localhost/api/places/place-1/reviews", {
       method: "POST",
-      body: JSON.stringify({ text: "bad" }),
+      body: JSON.stringify({ text: "bad", tags: [] }),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const response = await POST(request, { params: Promise.resolve({ id: "place-1" }) });
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when no tags", async () => {
+    const request = new NextRequest("http://localhost/api/places/place-1/reviews", {
+      method: "POST",
+      body: JSON.stringify({ text: "Нормальный длинный текст без тегов" }),
       headers: { "Content-Type": "application/json" },
     });
 

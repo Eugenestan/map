@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
-import { addReviewSchema, type AddReviewInput } from "@/schemas";
+import { addReviewSchema, addReviewStaffFormSchema, type AddReviewInput } from "@/schemas";
 import type { Tag } from "@/types";
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface AddReviewFormProps {
@@ -20,6 +20,8 @@ interface AddReviewFormProps {
   maxTags?: number;
   showSuccessState?: boolean;
   requireBotProtection?: boolean;
+  /** Без обязательных тегов (редактирование в админке). */
+  relaxTagRequirement?: boolean;
 }
 
 export function AddReviewForm({
@@ -34,6 +36,7 @@ export function AddReviewForm({
   maxTags = 3,
   showSuccessState = true,
   requireBotProtection = true,
+  relaxTagRequirement = false,
 }: AddReviewFormProps) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>(initialValues?.tags || []);
@@ -42,6 +45,13 @@ export function AddReviewForm({
   const [charCount, setCharCount] = useState(initialValues?.text?.length || 0);
   const [submitError, setSubmitError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [openTagGroups, setOpenTagGroups] = useState<Record<string, boolean>>({
+    language: true,
+    useful: false,
+    food: false,
+    warning: false,
+    service: false,
+  });
 
   const {
     register,
@@ -98,7 +108,9 @@ export function AddReviewForm({
         throw new Error("Подтвердите, что вы не бот");
       }
 
-      const parsed = addReviewSchema.safeParse(data);
+      setValue("tags", selectedTags);
+      const payload = { ...data, place_id: placeId, tags: selectedTags, text: data.text ?? "" };
+      const parsed = (relaxTagRequirement ? addReviewStaffFormSchema : addReviewSchema).safeParse(payload);
       if (!parsed.success) {
         const msg = parsed.error.errors.map((e) => e.message).join(" ");
         setSubmitError(msg || "Проверьте поля формы");
@@ -189,17 +201,15 @@ export function AddReviewForm({
       <p className="text-sm text-zinc-500">Отзыв о: <span className="font-medium text-zinc-800">{placeName}</span></p>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">Ваш отзыв *</label>
+        <label className="block text-sm font-medium text-zinc-700 mb-1">Комментарий</label>
         <textarea
           {...register("text", {
-            required: "Напишите отзыв",
-            minLength: { value: 5, message: "Минимум 5 символов" },
             maxLength: { value: 500, message: "Максимум 500 символов" },
             onChange: (e) => setCharCount(e.target.value.length),
           })}
           rows={4}
           className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
-          placeholder="Поделитесь своим опытом..."
+          placeholder="По желанию — пару слов о впечатлении"
         />
         <div className="flex justify-between mt-1">
           {errors.text ? <p className="text-xs text-red-500">{errors.text.message}</p> : <span />}
@@ -208,34 +218,41 @@ export function AddReviewForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">Теги (до {maxTags})</label>
-        <div className="space-y-3">
-          {Object.entries(groupedTags).map(([type, groupTags]) => (
-            groupTags.length > 0 && (
-              <div key={type}>
-                <p className="mb-1.5 text-xs font-medium text-zinc-500">{groupNames[type]}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {groupTags.map((tag) => (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => toggleTag(tag.id)}
-                      className={cn(
-                        "rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
-                        selectedTags.includes(tag.id)
-                          ? tag.tag_type === "warning"
-                            ? "border-red-300 bg-red-50 text-red-700"
-                            : "border-blue-300 bg-blue-50 text-blue-700"
-                          : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300",
-                      )}
-                    >
-                      {tag.name_ru}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
-          ))}
+        <label className="block text-sm font-medium text-zinc-700 mb-1">
+          {relaxTagRequirement ? `Теги (до ${maxTags})` : `Теги * (минимум 1, до ${maxTags})`}
+        </label>
+        <div className="space-y-2">
+          {Object.entries(groupedTags).map(
+            ([type, groupTags]) =>
+              groupTags.length > 0 && (
+                <TagAccordion
+                  key={type}
+                  title={groupNames[type]}
+                  isOpen={!!openTagGroups[type]}
+                  onToggle={() => setOpenTagGroups((prev) => ({ ...prev, [type]: !prev[type] }))}
+                >
+                  <div className="flex flex-wrap gap-1.5">
+                    {groupTags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag.id)}
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 text-xs font-medium transition-all",
+                          selectedTags.includes(tag.id)
+                            ? tag.tag_type === "warning"
+                              ? "border-red-300 bg-red-50 text-red-700"
+                              : "border-blue-300 bg-blue-50 text-blue-700"
+                            : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300",
+                        )}
+                      >
+                        {tag.name_ru}
+                      </button>
+                    ))}
+                  </div>
+                </TagAccordion>
+              ),
+          )}
         </div>
       </div>
 
@@ -278,5 +295,31 @@ export function AddReviewForm({
         {submitting ? "Сохранение..." : submitLabel}
       </button>
     </form>
+  );
+}
+
+function TagAccordion({
+  title,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50/80">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between px-3 py-2.5 text-left"
+      >
+        <span className="text-xs font-medium text-zinc-600">{title}</span>
+        <ChevronDown className={cn("h-4 w-4 text-zinc-500 transition-transform shrink-0", isOpen && "rotate-180")} />
+      </button>
+      {isOpen && <div className="border-t border-zinc-200 px-3 py-2.5 bg-white rounded-b-xl">{children}</div>}
+    </div>
   );
 }

@@ -25,14 +25,32 @@ const CATEGORY_COLORS: Record<string, string> = {
   "cat-11": "#6b7280",
 };
 
-function createIcon(categoryId: string, icon: string) {
+function createIcon(categoryId: string, icon: string, options?: { recommendedGlow?: boolean }) {
   const color = CATEGORY_COLORS[categoryId] || "#6b7280";
+  const inner = `<div style="background:${color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">${icon}</div>`;
+
+  if (!options?.recommendedGlow) {
+    return L.divIcon({
+      className: "custom-marker",
+      html: inner,
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32],
+    });
+  }
+
+  const html = `
+    <div style="position:relative;width:42px;height:42px;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;inset:1px;border-radius:50%;box-shadow:0 0 0 3px rgba(251,191,36,0.9),0 0 16px rgba(245,158,11,0.45);pointer-events:none;"></div>
+      <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:center;">${inner}</div>
+    </div>`;
+
   return L.divIcon({
     className: "custom-marker",
-    html: `<div style="background:${color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">${icon}</div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
+    html,
+    iconSize: [42, 42],
+    iconAnchor: [21, 42],
+    popupAnchor: [0, -42],
   });
 }
 
@@ -100,6 +118,8 @@ interface MapViewProps {
   onPick?: (lat: number, lng: number) => void;
   pickedLocation?: [number, number] | null;
   flyTo?: [number, number] | null;
+  /** Подсветка маркеров с флагом «Рекомендуют» от модератора. */
+  highlightRecommended?: boolean;
   className?: string;
 }
 
@@ -111,6 +131,7 @@ export function MapView({
   onPick,
   pickedLocation,
   flyTo: flyToCenter,
+  highlightRecommended = true,
   className,
 }: MapViewProps) {
   const isMounted = useSyncExternalStore(
@@ -148,7 +169,9 @@ export function MapView({
         <Marker
           key={place.id}
           position={[place.lat, place.lng]}
-          icon={createIcon(place.category_id, place.category.icon)}
+          icon={createIcon(place.category_id, place.category.icon, {
+            recommendedGlow: highlightRecommended && place.admin_recommended,
+          })}
           eventHandlers={{
             click: () => onPlaceClick?.(place),
           }}
@@ -156,6 +179,9 @@ export function MapView({
           <Popup>
             <div className="min-w-[180px]">
               <p className="font-semibold text-sm">{place.title}</p>
+              {place.admin_recommended && (
+                <p className="text-xs text-amber-700 font-medium mt-0.5">⭐ Рекомендуют</p>
+              )}
               <p className="text-xs text-zinc-500">{place.category.name_ru}</p>
               {place.address_text && <p className="text-xs text-zinc-500 mt-1">{place.address_text}</p>}
             </div>

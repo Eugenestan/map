@@ -17,6 +17,7 @@ type DevPlaceRecord = {
   working_hours: string | null;
   is_verified: boolean;
   last_verified_at: string | null;
+  admin_recommended: boolean;
   tags: string[];
   created_at: string;
   updated_at: string;
@@ -63,6 +64,7 @@ function createInitialStore() {
     working_hours: place.working_hours ?? null,
     is_verified: place.is_verified,
     last_verified_at: place.last_verified_at ?? null,
+    admin_recommended: !!(place as { admin_recommended?: boolean }).admin_recommended,
     tags: [...place.tags],
     created_at: place.last_verified_at ?? "2026-01-01T00:00:00.000Z",
     updated_at: place.last_verified_at ?? "2026-01-01T00:00:00.000Z",
