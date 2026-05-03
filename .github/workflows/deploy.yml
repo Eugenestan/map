@@ -23,8 +23,9 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 2m
           command_timeout: 30m
-          script_stop: true
+          debug: true
           script: |
             set -euo pipefail
             cd "${{ secrets.DEPLOY_PATH }}"

@@ -71,10 +71,10 @@ nano ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-Проверка с **вашего ПК** (подставьте IP и пользователя):
+Проверка **запускается на вашем ПК** в терминале (PowerShell / Git Bash). В команде **`ВАШ_IP` — это публичный IP сервера (VPS), а не IP вашего компьютера**; пользователь — тот, что в `DEPLOY_USER` (например `deploy`).
 
 ```bash
-ssh -i ./gha_deploy deploy@ВАШ_IP "echo ok"
+ssh -i ./gha_deploy deploy@ПУБЛИЧНЫЙ_IP_VPS "echo ok"
 ```
 
 Должно вывести `ok` без пароля.
@@ -85,38 +85,32 @@ ssh -i ./gha_deploy deploy@ВАШ_IP "echo ok"
 
 ## Шаг 3. Доступ репозитория на сервере к GitHub
 
-В каталоге проекта на сервере:
+Каталог проекта должен принадлежать пользователю `deploy` (один раз от **root**: `chown -R deploy:deploy /opt/nhatrang-map`). Дальше под `deploy`:
 
 ```bash
 cd /opt/nhatrang-map
-sudo chown -R deploy:deploy .
 ```
 
-Дальше один из вариантов.
+Выберите один вариант.
 
-**Вариант A — HTTPS + Personal Access Token (проще для новичка)**
+**Вариант A — Deploy key (read-only), рекомендуется**
 
-1. На GitHub: **Settings → Developer settings → Personal access tokens** — создайте token с правом **read** на репозиторий (достаточно `Contents: Read` для публичного клона, для приватного — `repo`).
-2. На сервере под `deploy`:
+Это настройки **самого репозитория** (как на скрине с «Deploy keys» слева), не аккаунта.
 
-   ```bash
-   git remote -v
-   ```
+1. На **сервере** под `deploy`: `ssh-keygen -t ed25519 -C "server-deploy-read" -f ~/.ssh/github_repo -N ""` → публичный ключ `~/.ssh/github_repo.pub`.
+2. На GitHub: откройте **репозиторий** → **Settings** → **Deploy keys** → **Add deploy key** → вставьте содержимое `.pub`, имя произвольное, **не** включайте «Allow write access» (нужно только чтение).
+3. Проверьте remote: `git remote -v` — для deploy key нужен **SSH**-URL, например `git@github.com:USER/map.git`. Если стоит HTTPS, переключите:  
+   `git remote set-url origin git@github.com:USER/map.git`  
+4. Первый раз: `ssh -T git@github.com` (ответит про аутентификацию — это нормально). Затем `git fetch origin` без пароля.
 
-   Если remote по SSH, можно переключить на HTTPS:
+**Вариант B — HTTPS + Personal Access Token**
 
-   ```bash
-   git remote set-url origin https://github.com/ВАШ_ЛОГИН/map.git
-   ```
+Токен создаётся в **настройках аккаунта**, не репозитория: справа сверху **аватар** → **Settings** (откроется `github.com/settings/...`) → внизу слева **Developer settings** → **Personal access tokens** → **Fine-grained tokens** (предпочтительно) или **Tokens (classic)**.
 
-3. Первый `git fetch` попросит логин/пароль: логин — ваш GitHub username, пароль — **token**. Либо настройте credential helper / сохраните URL с token (менее безопасно; лучше deploy key).
+- **Fine-grained:** выберите репозиторий → **Repository permissions** → **Contents: Read-only**.
+- **Classic (приватный репо):** scope **`repo`**.
 
-**Вариант B — Deploy key (read-only), рекомендуется**
-
-1. На сервере: `ssh-keygen ...` → публичный ключ добавить в репозиторий: **Settings → Deploy keys → Add** (только чтение).
-2. `origin` оставить по SSH: `git@github.com:.../map.git`.
-
-Тогда `git fetch` на сервере не требует пароля.
+Дальше на сервере: `git remote set-url origin https://github.com/USER/map.git`, затем `git fetch` — логин GitHub, **пароль = вставленный token** (не пароль от аккаунта). Хранить token в URL репозитория нежелательно; удобнее **Deploy key (вариант A)**.
 
 ---
 
@@ -131,7 +125,9 @@ sudo chown -R deploy:deploy .
 | `DEPLOY_SSH_KEY`  | **Весь** текст приватного ключа `gha_deploy` (включая строки `BEGIN` / `END`) |
 | `DEPLOY_PATH`     | Абсолютный путь к клону на сервере, например `/opt/nhatrang-map` |
 
-Сохраните каждый секрет отдельно.
+Если в логах Deploy ошибка про **host key** / fingerprint: на ПК выполните `ssh-keyscan -p 22 ВАШ_IP 2>/dev/null | ssh-keygen -lf -`, создайте секрет `DEPLOY_HOST_FINGERPRINT` со значением `SHA256:...` и в `.github/workflows/deploy.yml` в блок `with:` шага `appleboy/ssh-action` добавьте строку `fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}`.
+
+Сохраните каждый секрет отдельно. В **`DEPLOY_SSH_KEY`** не должно быть лишних пробелов в начале/конце и **обязательно полный блок** от `-----BEGIN` до `-----END`.
 
 ---
 
@@ -159,6 +155,7 @@ sudo chown -R deploy:deploy .
 | `docker: permission denied` | Пользователь в группе `docker`, перелогиниться. |
 | Долгий таймаут при build | На слабом VPS нормально; в workflow стоит `command_timeout: 30m`. |
 | Первый деплой не сработал | Убедитесь, что push был именно в **`master`** и workflow **CI** называется ровно `CI` (как в `.github/workflows/ci.yml`). |
+| **Deploy** падает за несколько секунд | Откройте красный запуск **Deploy** → шаг **Deploy over SSH** → текст ошибки. Часто: пустой/неверный `DEPLOY_HOST` или `DEPLOY_PATH`, неверный приватный ключ в `DEPLOY_SSH_KEY`, с VPS **нельзя достучаться с интернета** до порта 22 (фаервол провайдера). В workflow включён **`debug: true`** — в логе больше деталей про SSH. |
 
 ---
 
