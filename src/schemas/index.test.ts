@@ -27,6 +27,28 @@ describe("schemas", () => {
     expect(result.success).toBe(true);
   });
 
+  it("rejects telegram without leading @ when non-empty", () => {
+    const result = addPlaceSchema.safeParse({
+      title: "Клиника",
+      category_id: "cat-1",
+      lat: 12.24,
+      lng: 109.19,
+      telegram: "username",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts telegram starting with @", () => {
+    const result = addPlaceSchema.safeParse({
+      title: "Клиника",
+      category_id: "cat-1",
+      lat: 12.24,
+      lng: 109.19,
+      telegram: "@user",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects a place payload without coordinates", () => {
     const result = addPlaceSchema.safeParse({
       title: "Клиника",

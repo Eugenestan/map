@@ -18,7 +18,13 @@ export const addPlaceSchema = z.object({
   tags: z.array(z.string()).max(10, "Максимум 10 тегов").optional(),
   phone: z.string().max(50).optional(),
   website: z.string().max(300).optional(),
-  telegram: z.string().max(100).optional(),
+  telegram: z
+    .string()
+    .max(100, "Максимум 100 символов")
+    .optional()
+    .refine((s) => !s || !s.trim() || s.trim().startsWith("@"), {
+      message: "Telegram: начните с @ (например @username)",
+    }),
   working_hours: z.string().max(200).optional(),
   author_name: z.string().max(50).optional(),
 });
