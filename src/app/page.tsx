@@ -140,7 +140,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex min-h-0 h-dvh flex-col">
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
@@ -213,8 +213,14 @@ export default function HomePage() {
             className="w-full h-full"
           />
 
-          {/* Mobile FAB buttons */}
-          <div className="md:hidden absolute bottom-6 right-4 z-[1000] flex flex-col gap-3">
+          {/* Mobile FAB: safe-area + запас от нижней панели браузера / home indicator */}
+          <div
+            className="md:hidden absolute z-[1000] flex flex-col gap-3"
+            style={{
+              right: "max(1rem, env(safe-area-inset-right, 0px))",
+              bottom: "max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem))",
+            }}
+          >
             <button
               onClick={() => setActiveModal("filters")}
               className="flex items-center justify-center h-12 w-12 rounded-full bg-white shadow-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50"

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@/components/ui/analytics";
 import { FeedbackProvider, FeedbackFab } from "@/components/features/feedback/feedback-widget";
@@ -63,6 +63,13 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+};
+
+/** Чтобы `env(safe-area-inset-*)` на iPhone / PWA отдавал корректные отступы у нижних FAB. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
