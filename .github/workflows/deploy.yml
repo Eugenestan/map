@@ -17,6 +17,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Require deploy secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -e
+          ok=0
+          [ -n "$DEPLOY_HOST" ] || { echo "::error::Секрет DEPLOY_HOST пустой или не задан (Settings → Secrets → Actions)"; ok=1; }
+          [ -n "$DEPLOY_USER" ] || { echo "::error::Секрет DEPLOY_USER пустой или не задан"; ok=1; }
+          [ -n "$DEPLOY_SSH_KEY" ] || { echo "::error::Секрет DEPLOY_SSH_KEY пустой или не задан"; ok=1; }
+          [ -n "$DEPLOY_PATH" ] || { echo "::error::Секрет DEPLOY_PATH пустой или не задан"; ok=1; }
+          exit "$ok"
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.4
         with:

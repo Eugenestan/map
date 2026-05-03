@@ -116,7 +116,9 @@ cd /opt/nhatrang-map
 
 ## Шаг 4. Секреты в GitHub
 
-Репозиторий → **Settings → Secrets and variables → Actions → New repository secret**.
+В **том же репозитории на GitHub**, куда вы пушите `master`: **Settings → Secrets and variables → Actions** → вкладка **Secrets** → **New repository secret**.
+
+Имена должны совпасть **буква в букву** (регистр важен): `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PATH`. Если секретов нет или они в **другом** репозитории / только в **Environment** без привязки к workflow — в логе Deploy будет `missing server host` и пустой `cd`.
 
 | Имя секрета       | Значение |
 |-------------------|----------|
