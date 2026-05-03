@@ -47,6 +47,7 @@ export const TAGS: Tag[] = [
   { id: "tag-25", slug: "shrimp", name_ru: "Креветки", tag_type: "food", is_active: true, sort_order: 25 },
   { id: "tag-26", slug: "pho-bo", name_ru: "Фо бо", tag_type: "food", is_active: true, sort_order: 26 },
   { id: "tag-27", slug: "ramen", name_ru: "Рамен", tag_type: "food", is_active: true, sort_order: 27 },
+  { id: "tag-28", slug: "russian-kindergarten", name_ru: "Русский детский сад", tag_type: "language", is_active: true, sort_order: 28 },
 ];
 
 export const MOCK_PLACES = [
