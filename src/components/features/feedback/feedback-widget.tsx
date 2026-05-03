@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { MessageCircle, Check } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
@@ -15,8 +15,22 @@ const FEEDBACK_TYPES: { value: FeedbackInput["feedbackType"]; label: string }[] 
 
 type FeedbackFormValues = FeedbackInput & { website_url?: string };
 
-export function FeedbackWidget() {
-  const [open, setOpen] = useState(false);
+type FeedbackContextValue = {
+  openModal: () => void;
+};
+
+const FeedbackContext = createContext<FeedbackContextValue | null>(null);
+
+function useFeedback() {
+  const ctx = useContext(FeedbackContext);
+  if (!ctx) {
+    throw new Error("Компоненты обратной связи должны быть внутри FeedbackProvider");
+  }
+  return ctx;
+}
+
+export function FeedbackProvider({ children }: { children: ReactNode }) {
+  const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -37,13 +51,15 @@ export function FeedbackWidget() {
     },
   });
 
-  const handleClose = () => {
-    setOpen(false);
+  const handleClose = useCallback(() => {
+    setModalOpen(false);
     setSuccess(false);
     setSubmitError("");
     setTurnstileToken(null);
     reset();
-  };
+  }, [reset]);
+
+  const openModal = useCallback(() => setModalOpen(true), []);
 
   const onValid = async (data: FeedbackFormValues) => {
     setSubmitting(true);
@@ -88,17 +104,10 @@ export function FeedbackWidget() {
   };
 
   return (
-    <>
-      <button
-        type="button"
-        aria-label="Обратная связь"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-28 left-4 z-[1100] flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 md:bottom-6 md:left-auto md:right-6"
-      >
-        <MessageCircle className="h-7 w-7" aria-hidden />
-      </button>
+    <FeedbackContext.Provider value={{ openModal }}>
+      {children}
 
-      <Modal isOpen={open} onClose={handleClose} title="Обратная связь" size="sm">
+      <Modal isOpen={modalOpen} onClose={handleClose} title="Обратная связь" size="sm">
         {success ? (
           <div className="flex flex-col items-center py-4 text-center">
             <div className="mb-3 rounded-full bg-green-100 p-3">
@@ -170,7 +179,7 @@ export function FeedbackWidget() {
                 id="feedback-message"
                 rows={4}
                 {...register("message", { required: "Опишите обращение" })}
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none resize-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                className="w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 placeholder="Опишите ситуацию подробнее"
               />
               {errors.message && <p className="mt-1 text-xs text-red-500">{errors.message.message}</p>}
@@ -216,6 +225,36 @@ export function FeedbackWidget() {
           </form>
         )}
       </Modal>
-    </>
+    </FeedbackContext.Provider>
+  );
+}
+
+/** Плавающая кнопка: только от md (на мобилке — иконка в хедере). */
+export function FeedbackFab() {
+  const { openModal } = useFeedback();
+  return (
+    <button
+      type="button"
+      aria-label="Обратная связь"
+      onClick={openModal}
+      className="fixed bottom-6 right-6 z-[1100] hidden h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 md:flex"
+    >
+      <MessageCircle className="h-7 w-7" aria-hidden />
+    </button>
+  );
+}
+
+/** Кнопка в шапке справа (только мобильная вёрстка). */
+export function FeedbackHeaderButton() {
+  const { openModal } = useFeedback();
+  return (
+    <button
+      type="button"
+      aria-label="Обратная связь"
+      onClick={openModal}
+      className="-mr-1 rounded-full p-2 text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 md:hidden"
+    >
+      <MessageCircle className="h-6 w-6" aria-hidden />
+    </button>
   );
 }

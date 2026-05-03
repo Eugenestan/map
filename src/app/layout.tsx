@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@/components/ui/analytics";
-import { FeedbackWidget } from "@/components/features/feedback/feedback-widget";
+import { FeedbackProvider, FeedbackFab } from "@/components/features/feedback/feedback-widget";
 import "./globals.css";
 
 const inter = Inter({
@@ -73,8 +73,10 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`${inter.variable} h-full`}>
       <body className="h-full font-sans antialiased">
-        {children}
-        <FeedbackWidget />
+        <FeedbackProvider>
+          {children}
+          <FeedbackFab />
+        </FeedbackProvider>
         <Analytics />
       </body>
     </html>
