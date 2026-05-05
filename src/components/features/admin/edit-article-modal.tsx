@@ -3,19 +3,21 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Modal } from "@/components/ui/modal";
-import type { PlaceWithDetails, Tag } from "@/types";
+import type { Article, PlaceWithDetails, Tag } from "@/types";
 
 const MapView = dynamic(
   () => import("@/components/features/map/map-view").then((m) => m.MapView),
   { ssr: false, loading: () => <div className="h-[280px] rounded-xl bg-zinc-100" /> },
 );
 
-interface AddArticleModalProps {
+interface EditArticleModalProps {
+  article: Article | null;
   isOpen: boolean;
   tags: Tag[];
   places: PlaceWithDetails[];
   onClose: () => void;
   onSaved: () => Promise<void> | void;
+  onDeleted: () => Promise<void> | void;
   onUnauthorized: () => void;
 }
 
@@ -28,21 +30,36 @@ async function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnauthorized }: AddArticleModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [tagIds, setTagIds] = useState<string[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
-  const [pickedLocation, setPickedLocation] = useState<[number, number] | null>(null);
-  const [placeId, setPlaceId] = useState("");
+export function EditArticleModal({
+  article,
+  isOpen,
+  tags,
+  places,
+  onClose,
+  onSaved,
+  onDeleted,
+  onUnauthorized,
+}: EditArticleModalProps) {
+  const [title, setTitle] = useState(article?.title || "");
+  const [description, setDescription] = useState(article?.description || "");
+  const [tagIds, setTagIds] = useState<string[]>(article?.tag_ids || []);
+  const [photoUrls, setPhotoUrls] = useState<string[]>(article?.photo_urls || []);
+  const [pickedLocation, setPickedLocation] = useState<[number, number] | null>(
+    article ? [article.lat, article.lng] : null,
+  );
+  const [placeId, setPlaceId] = useState(article?.place_id || "");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
-  const [createdUrl, setCreatedUrl] = useState<string | null>(null);
 
   const selectedPlace = useMemo(
     () => places.find((place) => place.id === placeId) ?? null,
     [placeId, places],
   );
+
+  const toggleTag = (tagId: string) => {
+    setTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
+  };
 
   const handlePhotosChange = async (files: FileList | null) => {
     if (!files) return;
@@ -51,46 +68,25 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
     setPhotoUrls(encoded);
   };
 
-  const toggleTag = (tagId: string) => {
-    setTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
-  };
-
-  const reset = () => {
-    setTitle("");
-    setDescription("");
-    setTagIds([]);
-    setPhotoUrls([]);
-    setPickedLocation(null);
-    setPlaceId("");
-    setError("");
-    setCreatedUrl(null);
-  };
+  if (!article) {
+    return null;
+  }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={() => {
-        reset();
-        onClose();
-      }}
-      title="Добавить статью"
-      size="lg"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title={`Редактировать: ${article.title}`} size="lg">
       <form
         className="space-y-4"
         onSubmit={async (event) => {
           event.preventDefault();
           setError("");
-          setCreatedUrl(null);
           if (!pickedLocation) {
             setError("Выберите место на карте");
             return;
           }
-
           setSaving(true);
           try {
-            const response = await fetch("/api/admin/articles", {
-              method: "POST",
+            const response = await fetch(`/api/admin/articles/${article.id}`, {
+              method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 title: title.trim(),
@@ -102,19 +98,18 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
                 place_id: placeId || undefined,
               }),
             });
-
             if (response.status === 401) {
               onUnauthorized();
               return;
             }
             const body = await response.json().catch(() => null);
             if (!response.ok) {
-              throw new Error(body?.error || "Не удалось создать статью");
+              throw new Error(body?.error || "Не удалось обновить статью");
             }
-            setCreatedUrl(body?.data?.url || null);
             await onSaved();
+            onClose();
           } catch (submitError) {
-            setError(submitError instanceof Error ? submitError.message : "Не удалось создать статью");
+            setError(submitError instanceof Error ? submitError.message : "Не удалось обновить статью");
           } finally {
             setSaving(false);
           }
@@ -126,7 +121,6 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            placeholder="Например: Где оформить страховку в Нячанге"
             required
           />
         </div>
@@ -138,7 +132,6 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
             onChange={(event) => setDescription(event.target.value)}
             rows={5}
             className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            placeholder="Текст статьи..."
             required
           />
         </div>
@@ -222,7 +215,7 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
               </option>
             ))}
           </select>
-          {selectedPlace && <p className="mt-1 text-xs text-zinc-500">Статья будет добавлена в «Информация о месте».</p>}
+          {selectedPlace && <p className="mt-1 text-xs text-zinc-500">Ссылка останется в «Информация о месте».</p>}
         </div>
 
         <div>
@@ -243,27 +236,50 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
           )}
         </div>
 
-        {createdUrl && (
-          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-            Статья создана: <a className="underline" href={createdUrl} target="_blank" rel="noreferrer">{createdUrl}</a>
-          </p>
-        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || deleting}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {saving ? "Сохранение..." : "Создать статью"}
+            {saving ? "Сохранение..." : "Сохранить"}
           </button>
           <button
             type="button"
-            onClick={() => {
-              reset();
-              onClose();
+            disabled={saving || deleting}
+            onClick={async () => {
+              if (!confirm("Удалить статью? Ссылка будет удалена из всех мест.")) {
+                return;
+              }
+              setDeleting(true);
+              setError("");
+              try {
+                const response = await fetch(`/api/admin/articles/${article.id}`, { method: "DELETE" });
+                if (response.status === 401) {
+                  onUnauthorized();
+                  return;
+                }
+                if (!response.ok) {
+                  const body = await response.json().catch(() => null);
+                  throw new Error(body?.error || "Не удалось удалить статью");
+                }
+                await onDeleted();
+                onClose();
+              } catch (deleteError) {
+                setError(deleteError instanceof Error ? deleteError.message : "Не удалось удалить статью");
+              } finally {
+                setDeleting(false);
+              }
             }}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {deleting ? "Удаление..." : "Удалить"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
             className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
             Закрыть

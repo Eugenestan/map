@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Flag, LogOut, MapPin, MessageSquare, RefreshCw, X } from "lucide-react";
+import { Check, FileText, Flag, LogOut, MapPin, MessageSquare, RefreshCw, X } from "lucide-react";
 import { ApprovedPlaceEditor } from "@/components/features/admin/approved-place-editor";
 import { PendingPlaceModerationModal } from "@/components/features/admin/pending-place-moderation-modal";
 import { AddArticleModal } from "@/components/features/admin/add-article-modal";
+import { EditArticleModal } from "@/components/features/admin/edit-article-modal";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { cn } from "@/lib/cn";
-import type { PlaceWithDetails, Report, ReviewWithTags, Tag } from "@/types";
+import type { Article, PlaceWithDetails, Report, ReviewWithTags, Tag } from "@/types";
 
-type Tab = "places" | "approved" | "reviews" | "reports";
+type Tab = "places" | "approved" | "reviews" | "reports" | "articles";
 
 interface ReportWithTitle extends Report {
   entity_title?: string;
@@ -27,8 +28,10 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [approvedPlaces, setApprovedPlaces] = useState<PlaceWithDetails[]>([]);
   const [pendingReviews, setPendingReviews] = useState<ReviewWithTags[]>([]);
   const [reports, setReports] = useState<ReportWithTitle[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [selectedApprovedPlace, setSelectedApprovedPlace] = useState<PlaceWithDetails | null>(null);
   const [selectedPendingPlace, setSelectedPendingPlace] = useState<PlaceWithDetails | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,14 +44,15 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [placesRes, approvedRes, reviewsRes, reportsRes] = await Promise.all([
+      const [placesRes, approvedRes, reviewsRes, reportsRes, articlesRes] = await Promise.all([
         fetch("/api/admin/pending-places"),
         fetch("/api/admin/approved-places"),
         fetch("/api/admin/pending-reviews"),
         fetch("/api/reports"),
+        fetch("/api/admin/articles"),
       ]);
 
-      if ([placesRes, approvedRes, reviewsRes, reportsRes].some((response) => response.status === 401)) {
+      if ([placesRes, approvedRes, reviewsRes, reportsRes, articlesRes].some((response) => response.status === 401)) {
         handleUnauthorized();
         return;
       }
@@ -64,6 +68,9 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
 
       const reportsData = await reportsRes.json();
       setReports(reportsData.data || []);
+
+      const articlesData = await articlesRes.json();
+      setArticles(articlesData.data || []);
     } catch (error) {
       console.error("Ошибка загрузки данных модерации:", error);
     } finally {
@@ -144,6 +151,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     { id: "approved", label: "Одобренные", count: approvedPlaces.length, icon: <MapPin className="h-4 w-4" /> },
     { id: "reviews", label: "Отзывы", count: pendingReviews.length, icon: <MessageSquare className="h-4 w-4" /> },
     { id: "reports", label: "Жалобы", count: reports.length, icon: <Flag className="h-4 w-4" /> },
+    { id: "articles", label: "Статьи", count: articles.length, icon: <FileText className="h-4 w-4" /> },
   ];
 
   return (
@@ -396,6 +404,34 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         </div>
       )}
 
+      {tab === "articles" && (
+        <div className="space-y-3">
+          {articles.length === 0 ? (
+            <div className="py-12 text-center text-zinc-400">Пока нет статей</div>
+          ) : (
+            articles.map((article) => (
+              <div key={article.id} className="rounded-xl border border-zinc-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-zinc-900">{article.title}</h3>
+                    <p className="mt-1 text-sm text-zinc-600 line-clamp-2">{article.description}</p>
+                    <p className="mt-2 text-xs text-zinc-400">
+                      /articles/{article.slug} · {article.photo_urls.length} фото
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedArticle(article)}
+                    className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Редактировать
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
       <ApprovedPlaceEditor
         place={selectedApprovedPlace}
         isOpen={!!selectedApprovedPlace}
@@ -416,6 +452,17 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         onClose={() => setIsArticleModalOpen(false)}
         onUnauthorized={handleUnauthorized}
         onSaved={fetchData}
+        tags={tags}
+        places={approvedPlaces}
+      />
+      <EditArticleModal
+        key={selectedArticle ? `${selectedArticle.id}-${selectedArticle.updated_at}` : "article-editor"}
+        article={selectedArticle}
+        isOpen={!!selectedArticle}
+        onClose={() => setSelectedArticle(null)}
+        onUnauthorized={handleUnauthorized}
+        onSaved={fetchData}
+        onDeleted={fetchData}
         tags={tags}
         places={approvedPlaces}
       />

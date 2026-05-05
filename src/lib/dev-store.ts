@@ -173,6 +173,30 @@ export function insertDevArticle(article: DevArticleRecord) {
   getDevStore().articles.unshift(article);
 }
 
+export function getDevArticleById(id: string) {
+  return getDevStore().articles.find((article) => article.id === id) ?? null;
+}
+
+export function updateDevArticle(id: string, updater: (article: DevArticleRecord) => DevArticleRecord) {
+  const store = getDevStore();
+  const index = store.articles.findIndex((article) => article.id === id);
+  if (index === -1) {
+    return false;
+  }
+  store.articles[index] = updater(store.articles[index]);
+  return true;
+}
+
+export function deleteDevArticle(id: string) {
+  const store = getDevStore();
+  const next = store.articles.filter((article) => article.id !== id);
+  if (next.length === store.articles.length) {
+    return false;
+  }
+  store.articles = next;
+  return true;
+}
+
 export function listDevReports(status?: ReportStatus) {
   const reports = getDevStore().reports;
   return status ? reports.filter((report) => report.status === status) : reports;
