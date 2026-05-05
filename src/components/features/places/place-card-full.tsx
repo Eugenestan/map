@@ -86,12 +86,28 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
     }
   };
 
-  const handleShare = () => {
-    const url = `${window.location.origin}/place/${place.id}`;
-    if (navigator.share) {
-      navigator.share({ title: place.title, url });
-    } else {
-      navigator.clipboard.writeText(url);
+  const handleShare = async () => {
+    const placeUrl = `${window.location.origin}/place/${place.id}`;
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
+    const shareText = [
+      `Место: ${place.title}`,
+      `Координаты: ${place.lat}, ${place.lng}`,
+      `Карта: ${mapUrl}`,
+      `В NhaTrang Map: ${placeUrl}`,
+    ].join("\n");
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: place.title,
+          text: shareText,
+          url: placeUrl,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(shareText);
+    } catch {
+      /* ignore */
     }
   };
 
