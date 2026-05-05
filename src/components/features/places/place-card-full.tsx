@@ -95,19 +95,22 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
       `Карта: ${mapUrl}`,
       `В NhaTrang Map: ${placeUrl}`,
     ].join("\n");
+    const shareData = {
+      title: place.title,
+      text: shareText,
+      url: placeUrl,
+    };
 
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: place.title,
-          text: shareText,
-          url: placeUrl,
-        });
+      if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+        await navigator.share(shareData);
         return;
       }
       await navigator.clipboard.writeText(shareText);
+      window.alert("Ссылка и координаты скопированы. Вставьте в нужный мессенджер.");
     } catch {
-      /* ignore */
+      const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(placeUrl)}&text=${encodeURIComponent(shareText)}`;
+      window.open(telegramUrl, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -210,17 +213,17 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <button onClick={handleRoute} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={handleRoute} className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
           <Navigation className="h-4 w-4" /> Маршрут
         </button>
-        <button onClick={onAddReview} className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors">
+        <button type="button" onClick={onAddReview} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors">
           <MessageSquare className="h-4 w-4" /> Отзыв
         </button>
-        <button onClick={handleShare} className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors">
+        <button type="button" onClick={handleShare} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors">
           <Share2 className="h-4 w-4" /> Поделиться
         </button>
-        <button onClick={onReport} className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+        <button type="button" onClick={onReport} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
           <Flag className="h-4 w-4" /> Жалоба
         </button>
       </div>
