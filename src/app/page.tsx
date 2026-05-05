@@ -37,7 +37,7 @@ export default function HomePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [hasReviewsOnly, setHasReviewsOnly] = useState(false);
-  const [recommendedLayerOn, setRecommendedLayerOn] = useState(true);
+  const [recommendedLayerOn, setRecommendedLayerOn] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithDetails | null>(null);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [pickMode, setPickMode] = useState(false);
@@ -144,6 +144,10 @@ export default function HomePage() {
     }
   };
 
+  const mapPlaces = recommendedLayerOn
+    ? places.filter((place) => place.admin_recommended)
+    : places;
+
   return (
     <div className="flex min-h-0 h-dvh flex-col">
       <Header />
@@ -225,7 +229,7 @@ export default function HomePage() {
           </div>
 
           <MapView
-            places={places}
+            places={mapPlaces}
             onPlaceClick={handlePlaceClick}
             pickMode={pickMode}
             onPick={handlePick}

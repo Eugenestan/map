@@ -71,6 +71,7 @@ export const adminUpdatePlaceSchema = addPlaceSchema.extend({
   status: z.enum(["approved", "hidden", "archived"]),
   is_verified: z.boolean().optional(),
   admin_recommended: z.boolean().optional(),
+  place_info: z.string().max(2000, "Поле «Информация о месте» слишком длинное").optional(),
 });
 
 export type AdminUpdatePlaceInput = z.infer<typeof adminUpdatePlaceSchema>;
@@ -169,3 +170,19 @@ export const feedbackSchema = z.object({
 });
 
 export type FeedbackInput = z.infer<typeof feedbackSchema>;
+
+export const createArticleSchema = z.object({
+  title: z.string().min(2, "Заголовок должен быть не менее 2 символов").max(200),
+  description: z.string().min(10, "Описание должно быть не менее 10 символов").max(5000),
+  tag_ids: z.array(z.string()).max(10, "Максимум 10 тегов"),
+  photo_urls: z
+    .array(
+      z.string().max(6000000, "Фото слишком большое. Выберите изображение меньшего размера."),
+    )
+    .max(5, "Максимум 5 фото"),
+  lat: zGeoCoord(-90, 90, "Укажите место на карте"),
+  lng: zGeoCoord(-180, 180, "Укажите место на карте"),
+  place_id: z.string().optional(),
+});
+
+export type CreateArticleInput = z.infer<typeof createArticleSchema>;

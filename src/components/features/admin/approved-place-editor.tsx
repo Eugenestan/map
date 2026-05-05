@@ -29,6 +29,7 @@ export function ApprovedPlaceEditor({
   const [reviews, setReviews] = useState<ReviewWithTags[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [selectedReview, setSelectedReview] = useState<ReviewWithTags | null>(null);
+  const [placeInfo, setPlaceInfo] = useState("");
 
   const loadReviews = useCallback(async () => {
     if (!place) {
@@ -55,6 +56,7 @@ export function ApprovedPlaceEditor({
       setStatus(place.status);
       setIsVerified(place.is_verified);
       setAdminRecommended(place.admin_recommended);
+      setPlaceInfo(place.place_info || "");
       void loadReviews();
     }
   }, [loadReviews, place]);
@@ -124,7 +126,13 @@ export function ApprovedPlaceEditor({
               const response = await fetch(`/api/admin/places/${place.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...data, status, is_verified: isVerified, admin_recommended: adminRecommended }),
+                body: JSON.stringify({
+                  ...data,
+                  status,
+                  is_verified: isVerified,
+                  admin_recommended: adminRecommended,
+                  place_info: placeInfo,
+                }),
               });
 
               if (response.status === 401) {
@@ -141,6 +149,16 @@ export function ApprovedPlaceEditor({
               onClose();
             }}
           />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-700">Информация о месте</label>
+            <textarea
+              value={placeInfo}
+              onChange={(event) => setPlaceInfo(event.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              placeholder="Ссылки на статьи по месту"
+            />
+          </div>
 
           <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
             <div className="flex items-center gap-2">

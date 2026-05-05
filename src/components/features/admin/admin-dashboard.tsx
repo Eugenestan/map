@@ -4,9 +4,11 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Flag, LogOut, MapPin, MessageSquare, RefreshCw, X } from "lucide-react";
 import { ApprovedPlaceEditor } from "@/components/features/admin/approved-place-editor";
+import { PendingPlaceModerationModal } from "@/components/features/admin/pending-place-moderation-modal";
+import { AddArticleModal } from "@/components/features/admin/add-article-modal";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { cn } from "@/lib/cn";
-import type { PlaceWithDetails, Report, ReviewWithTags } from "@/types";
+import type { PlaceWithDetails, Report, ReviewWithTags, Tag } from "@/types";
 
 type Tab = "places" | "approved" | "reviews" | "reports";
 
@@ -26,6 +28,9 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [pendingReviews, setPendingReviews] = useState<ReviewWithTags[]>([]);
   const [reports, setReports] = useState<ReportWithTitle[]>([]);
   const [selectedApprovedPlace, setSelectedApprovedPlace] = useState<PlaceWithDetails | null>(null);
+  const [selectedPendingPlace, setSelectedPendingPlace] = useState<PlaceWithDetails | null>(null);
+  const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -70,15 +75,12 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     fetchData();
   }, [fetchData]);
 
-  const handleApprovePlace = async (id: string) => {
-    const response = await fetch(`/api/places/${id}/approve`, { method: "POST" });
-    if (response.status === 401) {
-      handleUnauthorized();
-      return;
-    }
-
-    setPendingPlaces((prev) => prev.filter((place) => place.id !== id));
-  };
+  useEffect(() => {
+    fetch("/api/tags")
+      .then((response) => response.json())
+      .then((data) => setTags(data.data || []))
+      .catch(() => setTags([]));
+  }, []);
 
   const handleRejectPlace = async (id: string) => {
     const response = await fetch(`/api/places/${id}/reject`, { method: "POST" });
@@ -153,6 +155,12 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsArticleModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50"
+          >
+            Добавить статью
+          </button>
+          <button
             onClick={fetchData}
             disabled={loading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50"
@@ -218,7 +226,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                   </div>
                   <div className="flex flex-shrink-0 gap-2">
                     <button
-                      onClick={() => handleApprovePlace(place.id)}
+                      onClick={() => setSelectedPendingPlace(place)}
                       className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
                     >
                       <Check className="h-4 w-4" /> Одобрить
@@ -394,6 +402,22 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         onClose={() => setSelectedApprovedPlace(null)}
         onUnauthorized={handleUnauthorized}
         onSaved={fetchData}
+      />
+      <PendingPlaceModerationModal
+        key={selectedPendingPlace ? `${selectedPendingPlace.id}-${selectedPendingPlace.updated_at}` : "pending-place-modal"}
+        place={selectedPendingPlace}
+        isOpen={!!selectedPendingPlace}
+        onClose={() => setSelectedPendingPlace(null)}
+        onUnauthorized={handleUnauthorized}
+        onSaved={fetchData}
+      />
+      <AddArticleModal
+        isOpen={isArticleModalOpen}
+        onClose={() => setIsArticleModalOpen(false)}
+        onUnauthorized={handleUnauthorized}
+        onSaved={fetchData}
+        tags={tags}
+        places={approvedPlaces}
       />
     </div>
   );

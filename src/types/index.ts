@@ -48,6 +48,8 @@ export interface Place {
   last_verified_at: string | null;
   /** Модератор отметил место в подборке «Рекомендуют» (подсветка на карте). */
   admin_recommended: boolean;
+  /** Дополнительная информация от модератора, например ссылки на статьи. */
+  place_info: string | null;
   source_type: string | null;
   duplicate_of: string | null;
 }
@@ -108,6 +110,21 @@ export interface PlacePhoto {
   created_by: string | null;
   status: string;
   created_at: string;
+}
+
+export interface Article {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  title: string;
+  slug: string;
+  description: string;
+  tag_ids: string[];
+  photo_urls: string[];
+  lat: number;
+  lng: number;
+  place_id: string | null;
 }
 
 export interface BBox {

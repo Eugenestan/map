@@ -42,6 +42,7 @@ function createIcon(categoryId: string, icon: string, options?: { recommendedGlo
   const html = `
     <div style="position:relative;width:42px;height:42px;display:flex;align-items:center;justify-content:center;">
       <div style="position:absolute;inset:1px;border-radius:50%;box-shadow:0 0 0 3px rgba(251,191,36,0.9),0 0 16px rgba(245,158,11,0.45);pointer-events:none;"></div>
+      <div style="position:absolute;top:-8px;right:-6px;z-index:3;color:#f59e0b;font-size:18px;line-height:1;text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,0 1px 4px rgba(0,0,0,0.25);pointer-events:none;">★</div>
       <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:center;">${inner}</div>
     </div>`;
 
@@ -131,7 +132,6 @@ export function MapView({
   onPick,
   pickedLocation,
   flyTo: flyToCenter,
-  highlightRecommended = true,
   className,
 }: MapViewProps) {
   const isMounted = useSyncExternalStore(
@@ -170,7 +170,7 @@ export function MapView({
           key={place.id}
           position={[place.lat, place.lng]}
           icon={createIcon(place.category_id, place.category.icon, {
-            recommendedGlow: highlightRecommended && place.admin_recommended,
+            recommendedGlow: place.admin_recommended,
           })}
           eventHandlers={{
             click: () => onPlaceClick?.(place),

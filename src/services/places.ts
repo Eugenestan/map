@@ -155,6 +155,7 @@ function getMockPlacesCollection(includeAllReviewStatuses = false): PlaceWithDet
       is_verified: place.is_verified,
       last_verified_at: place.last_verified_at,
       admin_recommended: !!(place as { admin_recommended?: boolean }).admin_recommended,
+      place_info: (place as { place_info?: string | null }).place_info ?? null,
       source_type: null,
       duplicate_of: null,
       category,
@@ -293,6 +294,7 @@ async function hydratePlaces(rows: PlaceBaseRow[], includeAllReviewStatuses = fa
     is_verified: normalizeBoolean(row.is_verified),
     last_verified_at: normalizeTimestamp(row.last_verified_at),
     admin_recommended: normalizeBoolean(row.admin_recommended),
+    place_info: row.place_info ?? null,
     source_type: row.source_type,
     duplicate_of: row.duplicate_of,
     category: mapPlaceCategory(row),
@@ -431,6 +433,7 @@ export async function createPlace(data: {
       is_verified: false,
       last_verified_at: null,
       admin_recommended: false,
+      place_info: null,
       tags: [...(data.tags || [])],
       created_at: now,
       updated_at: now,
@@ -522,6 +525,7 @@ export async function updatePlace(id: string, data: {
   status: "approved" | "hidden" | "archived";
   is_verified?: boolean;
   admin_recommended?: boolean;
+  place_info?: string;
 }): Promise<void> {
   const slug = slugify(data.title) || id;
 
@@ -543,6 +547,7 @@ export async function updatePlace(id: string, data: {
       is_verified: !!data.is_verified,
       last_verified_at: data.is_verified ? new Date().toISOString() : null,
       admin_recommended: data.admin_recommended !== undefined ? !!data.admin_recommended : place.admin_recommended,
+      place_info: data.place_info?.trim() || null,
       tags: [...(data.tags || [])],
       updated_at: new Date().toISOString(),
     }));
@@ -560,8 +565,8 @@ export async function updatePlace(id: string, data: {
       UPDATE places
       SET title = $1, slug = $2, category_id = $3, status = $4, description = $5, address_text = $6, lat = $7, lng = $8,
           phone = $9, website = $10, telegram = $11, working_hours = $12, is_verified = $13,
-          admin_recommended = COALESCE($14, admin_recommended), updated_at = NOW()
-      WHERE id = $15
+          admin_recommended = COALESCE($14, admin_recommended), place_info = $15, updated_at = NOW()
+      WHERE id = $16
     `, [
       data.title,
       slug,
@@ -577,6 +582,7 @@ export async function updatePlace(id: string, data: {
       data.working_hours || null,
       !!data.is_verified,
       data.admin_recommended !== undefined ? !!data.admin_recommended : null,
+      data.place_info?.trim() || null,
       id,
     ]);
 

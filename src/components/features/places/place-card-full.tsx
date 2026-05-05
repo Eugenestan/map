@@ -63,6 +63,10 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
   const totalDispute = place.tags.reduce((s, t) => s + t.dispute_count, 0);
   const trust = computePlaceTrust(place.is_verified, place.last_verified_at, totalConfirm, totalDispute);
   const isDanger = place.category_id === "cat-10";
+  const infoLinks = (place.place_info || "")
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .filter((item) => item.startsWith("http://") || item.startsWith("https://") || item.startsWith("/"));
 
   const handleLike = async (reviewId: string) => {
     if (likedReviewIds.has(reviewId)) return;
@@ -164,6 +168,29 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
         <div>
           <h3 className="text-sm font-semibold text-zinc-700 mb-1">Описание</h3>
           <p className="text-sm text-zinc-600 leading-relaxed">{place.description}</p>
+        </div>
+      )}
+
+      {place.place_info && (
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-700 mb-1">Информация о месте</h3>
+          {infoLinks.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              {infoLinks.map((link, index) => (
+                <a
+                  key={`${link}-${index}`}
+                  href={link}
+                  className="text-sm text-blue-600 underline-offset-2 hover:underline"
+                  target={link.startsWith("/") ? undefined : "_blank"}
+                  rel={link.startsWith("/") ? undefined : "noreferrer"}
+                >
+                  {link}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="whitespace-pre-line text-sm text-zinc-600">{place.place_info}</p>
+          )}
         </div>
       )}
 

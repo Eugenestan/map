@@ -1,5 +1,5 @@
 import { CATEGORIES, MOCK_PLACES, MOCK_REVIEWS, TAGS } from "@/data/seed";
-import type { PlaceStatus, Report, ReportStatus, ReviewStatus } from "@/types";
+import type { Article, PlaceStatus, Report, ReportStatus, ReviewStatus } from "@/types";
 
 type DevPlaceRecord = {
   id: string;
@@ -18,10 +18,13 @@ type DevPlaceRecord = {
   is_verified: boolean;
   last_verified_at: string | null;
   admin_recommended: boolean;
+  place_info: string | null;
   tags: string[];
   created_at: string;
   updated_at: string;
 };
+
+type DevArticleRecord = Article;
 
 type DevReviewRecord = {
   id: string;
@@ -42,6 +45,7 @@ declare global {
         places: DevPlaceRecord[];
         reviews: DevReviewRecord[];
         reports: Report[];
+        articles: DevArticleRecord[];
         reviewSessionLikes: Set<string>;
       }
     | undefined;
@@ -66,6 +70,7 @@ function createInitialStore() {
     last_verified_at: place.last_verified_at ?? null,
     admin_recommended: !!(place as { admin_recommended?: boolean }).admin_recommended,
     tags: [...place.tags],
+    place_info: null,
     created_at: place.last_verified_at ?? "2026-01-01T00:00:00.000Z",
     updated_at: place.last_verified_at ?? "2026-01-01T00:00:00.000Z",
   }));
@@ -87,6 +92,7 @@ function createInitialStore() {
     places,
     reviews,
     reports: [],
+    articles: [],
     reviewSessionLikes: new Set<string>(),
   };
 }
@@ -157,6 +163,14 @@ export function updateDevReview(id: string, updater: (review: DevReviewRecord) =
 
 export function insertDevReport(report: Report) {
   getDevStore().reports.unshift(report);
+}
+
+export function listDevArticles() {
+  return getDevStore().articles;
+}
+
+export function insertDevArticle(article: DevArticleRecord) {
+  getDevStore().articles.unshift(article);
 }
 
 export function listDevReports(status?: ReportStatus) {

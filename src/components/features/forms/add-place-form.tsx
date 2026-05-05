@@ -7,6 +7,7 @@ import type { Category, Tag } from "@/types";
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { MapPin, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
+import type { ReactNode } from "react";
 
 /** Поля формы без координат — lat/lng только из пропсов. */
 type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
@@ -24,6 +25,8 @@ interface AddPlaceFormProps {
   successDescription?: string;
   showSuccessState?: boolean;
   requireBotProtection?: boolean;
+  infoField?: ReactNode;
+  secondaryAction?: ReactNode;
 }
 
 export function AddPlaceForm({
@@ -38,6 +41,8 @@ export function AddPlaceForm({
   successDescription = "После модерации оно появится на карте.",
   showSuccessState = true,
   requireBotProtection = true,
+  infoField,
+  secondaryAction,
 }: AddPlaceFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -274,6 +279,8 @@ export function AddPlaceForm({
         {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>}
       </div>
 
+      {infoField}
+
       <div>
         <label className="block text-sm font-medium text-zinc-700 mb-2">Теги</label>
         {Object.entries(groupedTags).map(([type, groupTags]) => (
@@ -364,6 +371,7 @@ export function AddPlaceForm({
       >
         {submitting ? "Сохранение..." : submitLabel}
       </button>
+      {secondaryAction}
     </form>
   );
 }
