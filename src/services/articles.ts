@@ -11,13 +11,81 @@ import {
 } from "@/lib/dev-store";
 import type { Article } from "@/types";
 
-function slugify(text: string): string {
+const RU_TO_LAT: Record<string, string> = {
+  а: "a",
+  б: "b",
+  в: "v",
+  г: "g",
+  д: "d",
+  е: "e",
+  ё: "e",
+  ж: "zh",
+  з: "z",
+  и: "i",
+  й: "y",
+  к: "k",
+  л: "l",
+  м: "m",
+  н: "n",
+  о: "o",
+  п: "p",
+  р: "r",
+  с: "s",
+  т: "t",
+  у: "u",
+  ф: "f",
+  х: "h",
+  ц: "ts",
+  ч: "ch",
+  ш: "sh",
+  щ: "sch",
+  ъ: "",
+  ы: "y",
+  ь: "",
+  э: "e",
+  ю: "yu",
+  я: "ya",
+};
+
+function transliterateRu(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
+    .split("")
+    .map((char) => RU_TO_LAT[char] ?? char)
+    .join("");
+}
+
+function slugifyArticleTitle(title: string): string {
+  const transliterated = transliterateRu(title);
+  const words = transliterated
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 7);
+  return words.join("-").replace(/-+/g, "-");
+}
+
+async function slugExists(slug: string, excludeId?: string): Promise<boolean> {
+  if (!isDatabaseConfigured()) {
+    return listDevArticles().some((article) => article.slug === slug && article.id !== excludeId);
+  }
+  const rows = await execute<{ id: string }>(
+    "SELECT id FROM articles WHERE slug = $1 AND ($2::text IS NULL OR id <> $2) LIMIT 1",
+    [slug, excludeId || null],
+  );
+  return rows.length > 0;
+}
+
+async function createUniqueArticleSlug(title: string, excludeId?: string): Promise<string> {
+  const base = slugifyArticleTitle(title) || "article";
+  let candidate = base;
+  let index = 2;
+  while (await slugExists(candidate, excludeId)) {
+    candidate = `${base}-${index}`;
+    index += 1;
+  }
+  return candidate;
 }
 
 function appendInfoLink(existing: string | null | undefined, url: string): string {
@@ -78,7 +146,7 @@ export async function createArticle(data: {
   place_id?: string;
 }): Promise<{ id: string; slug: string; url: string }> {
   const id = uuid();
-  const slug = `${slugify(data.title) || "article"}-${id.slice(0, 8)}`;
+  const slug = await createUniqueArticleSlug(data.title);
   const url = `/articles/${slug}`;
 
   if (!isDatabaseConfigured()) {
