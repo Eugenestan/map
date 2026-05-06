@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: articles });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Ошибка при загрузке статей" }, { status: 500 });
+    return NextResponse.json({ error: "Ошибка при загрузке мест" }, { status: 500 });
   }
 }
 
@@ -32,9 +32,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await createArticle(parsed.data);
-    return NextResponse.json({ data: result, message: "Статья создана" }, { status: 201 });
+    return NextResponse.json({ data: result, message: "Место создано" }, { status: 201 });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Ошибка при создании статьи" }, { status: 500 });
+    return NextResponse.json({ error: "Ошибка при создании места" }, { status: 500 });
   }
 }

@@ -151,7 +151,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     { id: "approved", label: "Одобренные", count: approvedPlaces.length, icon: <MapPin className="h-4 w-4" /> },
     { id: "reviews", label: "Отзывы", count: pendingReviews.length, icon: <MessageSquare className="h-4 w-4" /> },
     { id: "reports", label: "Жалобы", count: reports.length, icon: <Flag className="h-4 w-4" /> },
-    { id: "articles", label: "Статьи", count: articles.length, icon: <FileText className="h-4 w-4" /> },
+    { id: "articles", label: "Места", count: articles.length, icon: <FileText className="h-4 w-4" /> },
   ];
 
   return (
@@ -166,7 +166,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
             onClick={() => setIsArticleModalOpen(true)}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50"
           >
-            Добавить статью
+            Добавить место
           </button>
           <button
             onClick={fetchData}
@@ -407,7 +407,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
       {tab === "articles" && (
         <div className="space-y-3">
           {articles.length === 0 ? (
-            <div className="py-12 text-center text-zinc-400">Пока нет статей</div>
+            <div className="py-12 text-center text-zinc-400">Пока нет мест</div>
           ) : (
             articles.map((article) => (
               <div key={article.id} className="rounded-xl border border-zinc-200 bg-white p-4">

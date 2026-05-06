@@ -11,6 +11,14 @@ import {
 } from "@/lib/dev-store";
 import type { Article } from "@/types";
 
+export interface ArticleFilters {
+  search?: string;
+  placeId?: string;
+  tagIds?: string[];
+  limit?: number;
+  offset?: number;
+}
+
 const RU_TO_LAT: Record<string, string> = {
   а: "a",
   б: "b",
@@ -136,6 +144,43 @@ function mapArticle(row: ArticleRow): Article {
   };
 }
 
+function normalizeArticleFilters(filters: ArticleFilters): Required<Pick<ArticleFilters, "tagIds">> &
+  Pick<ArticleFilters, "search" | "placeId" | "limit" | "offset"> {
+  return {
+    search: filters.search?.trim() || undefined,
+    placeId: filters.placeId?.trim() || undefined,
+    tagIds: [...new Set(filters.tagIds?.map((tagId) => tagId.trim()).filter(Boolean) || [])],
+    limit: filters.limit,
+    offset: filters.offset,
+  };
+}
+
+function applyDevArticleFilters(articles: Article[], filters: ArticleFilters): Article[] {
+  const normalized = normalizeArticleFilters(filters);
+  let items = [...articles];
+
+  if (normalized.search) {
+    const search = normalized.search.toLowerCase();
+    items = items.filter((article) =>
+      [article.title, article.description].some((value) => value.toLowerCase().includes(search)),
+    );
+  }
+
+  if (normalized.placeId) {
+    items = items.filter((article) => article.place_id === normalized.placeId);
+  }
+
+  if (normalized.tagIds.length > 0) {
+    items = items.filter((article) => normalized.tagIds.every((tagId) => article.tag_ids.includes(tagId)));
+  }
+
+  items.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  const offset = normalized.offset || 0;
+  const limit = normalized.limit || 100;
+  return items.slice(offset, offset + limit);
+}
+
 export async function createArticle(data: {
   title: string;
   description: string;
@@ -225,6 +270,76 @@ export async function getArticleById(id: string): Promise<Article | null> {
   return mapArticle(rows[0]);
 }
 
+export async function getArticles(filters: ArticleFilters = {}): Promise<Article[]> {
+  const normalized = normalizeArticleFilters(filters);
+
+  if (!isDatabaseConfigured()) {
+    return applyDevArticleFilters(listDevArticles(), normalized);
+  }
+
+  const conditions: string[] = [];
+  const params: (string | number | string[])[] = [];
+  let parameterIndex = 1;
+
+  if (normalized.search) {
+    conditions.push(`(title ILIKE $${parameterIndex} OR description ILIKE $${parameterIndex})`);
+    params.push(`%${normalized.search}%`);
+    parameterIndex += 1;
+  }
+
+  if (normalized.placeId) {
+    conditions.push(`place_id = $${parameterIndex}`);
+    params.push(normalized.placeId);
+    parameterIndex += 1;
+  }
+
+  if (normalized.tagIds.length > 0) {
+    conditions.push(`tag_ids @> $${parameterIndex}::text[]`);
+    params.push(normalized.tagIds);
+    parameterIndex += 1;
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const limit = normalized.limit || 100;
+  const offset = normalized.offset || 0;
+
+  params.push(limit, offset);
+  const rows = await execute<ArticleRow>(
+    `
+    SELECT *
+    FROM articles
+    ${where}
+    ORDER BY created_at DESC
+    LIMIT $${parameterIndex} OFFSET $${parameterIndex + 1}
+  `,
+    params,
+  );
+
+  return rows.map(mapArticle);
+}
+
+export async function getRelatedArticles(article: Article, limit = 3): Promise<Article[]> {
+  const candidates = (await getArticles({ limit: 100 })).filter((item) => item.id !== article.id);
+  const tagIds = new Set(article.tag_ids);
+
+  const scored = candidates
+    .map((candidate) => {
+      const samePlaceScore = article.place_id && candidate.place_id === article.place_id ? 10 : 0;
+      const tagScore = candidate.tag_ids.filter((tagId) => tagIds.has(tagId)).length;
+      return { article: candidate, score: samePlaceScore + tagScore };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || b.article.created_at.localeCompare(a.article.created_at))
+    .map((item) => item.article);
+
+  if (scored.length >= limit) {
+    return scored.slice(0, limit);
+  }
+
+  const fallback = candidates.filter((candidate) => !scored.some((item) => item.id === candidate.id));
+  return [...scored, ...fallback].slice(0, limit);
+}
+
 export async function getArticlesForAdmin(): Promise<Article[]> {
   if (!isDatabaseConfigured()) {
     return [...listDevArticles()].sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -247,7 +362,7 @@ export async function updateArticle(
 ): Promise<void> {
   const existing = await getArticleById(id);
   if (!existing) {
-    throw new Error("Статья не найдена");
+    throw new Error("Место не найдено");
   }
   const url = `/articles/${existing.slug}`;
 
@@ -329,7 +444,7 @@ export async function updateArticle(
 export async function deleteArticle(id: string): Promise<void> {
   const existing = await getArticleById(id);
   if (!existing) {
-    throw new Error("Статья не найдена");
+    throw new Error("Место не найдено");
   }
   const url = `/articles/${existing.slug}`;
 

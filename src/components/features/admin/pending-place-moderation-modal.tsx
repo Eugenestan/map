@@ -52,7 +52,7 @@ export function PendingPlaceModerationModal({
               onChange={(event) => setPlaceInfo(event.target.value)}
               rows={3}
               className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              placeholder="Добавьте ссылку(и) на статью(и)"
+              placeholder="Добавьте ссылку(и) на места"
             />
           </div>
         )}

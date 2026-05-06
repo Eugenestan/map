@@ -104,12 +104,12 @@ export function EditArticleModal({
             }
             const body = await response.json().catch(() => null);
             if (!response.ok) {
-              throw new Error(body?.error || "Не удалось обновить статью");
+              throw new Error(body?.error || "Не удалось обновить место");
             }
             await onSaved();
             onClose();
           } catch (submitError) {
-            setError(submitError instanceof Error ? submitError.message : "Не удалось обновить статью");
+            setError(submitError instanceof Error ? submitError.message : "Не удалось обновить место");
           } finally {
             setSaving(false);
           }
@@ -250,7 +250,7 @@ export function EditArticleModal({
             type="button"
             disabled={saving || deleting}
             onClick={async () => {
-              if (!confirm("Удалить статью? Ссылка будет удалена из всех мест.")) {
+              if (!confirm("Удалить место? Ссылка будет удалена из всех мест.")) {
                 return;
               }
               setDeleting(true);
@@ -263,12 +263,12 @@ export function EditArticleModal({
                 }
                 if (!response.ok) {
                   const body = await response.json().catch(() => null);
-                  throw new Error(body?.error || "Не удалось удалить статью");
+                  throw new Error(body?.error || "Не удалось удалить место");
                 }
                 await onDeleted();
                 onClose();
               } catch (deleteError) {
-                setError(deleteError instanceof Error ? deleteError.message : "Не удалось удалить статью");
+                setError(deleteError instanceof Error ? deleteError.message : "Не удалось удалить место");
               } finally {
                 setDeleting(false);
               }

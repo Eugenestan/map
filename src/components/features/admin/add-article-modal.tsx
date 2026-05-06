@@ -73,7 +73,7 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
         reset();
         onClose();
       }}
-      title="Добавить статью"
+      title="Добавить место"
       size="lg"
     >
       <form
@@ -109,12 +109,12 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
             }
             const body = await response.json().catch(() => null);
             if (!response.ok) {
-              throw new Error(body?.error || "Не удалось создать статью");
+              throw new Error(body?.error || "Не удалось создать место");
             }
             setCreatedUrl(body?.data?.url || null);
             await onSaved();
           } catch (submitError) {
-            setError(submitError instanceof Error ? submitError.message : "Не удалось создать статью");
+            setError(submitError instanceof Error ? submitError.message : "Не удалось создать место");
           } finally {
             setSaving(false);
           }
@@ -138,7 +138,7 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
             onChange={(event) => setDescription(event.target.value)}
             rows={5}
             className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            placeholder="Текст статьи..."
+            placeholder="Текст места..."
             required
           />
         </div>
@@ -222,7 +222,7 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
               </option>
             ))}
           </select>
-          {selectedPlace && <p className="mt-1 text-xs text-zinc-500">Статья будет добавлена в «Информация о месте».</p>}
+          {selectedPlace && <p className="mt-1 text-xs text-zinc-500">Место будет добавлено в «Информация о месте».</p>}
         </div>
 
         <div>
@@ -245,7 +245,7 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
 
         {createdUrl && (
           <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-            Статья создана: <a className="underline" href={createdUrl} target="_blank" rel="noreferrer">{createdUrl}</a>
+            Место создано: <a className="underline" href={createdUrl} target="_blank" rel="noreferrer">{createdUrl}</a>
           </p>
         )}
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -256,7 +256,7 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
             disabled={saving}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {saving ? "Сохранение..." : "Создать статью"}
+            {saving ? "Сохранение..." : "Создать место"}
           </button>
           <button
             type="button"

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/ui/header";
-import { getArticleBySlug } from "@/services/articles";
+import { getArticleBySlug, getRelatedArticles } from "@/services/articles";
+import { getPlaceById } from "@/services/places";
 import { getReviewsByPlace } from "@/services/reviews";
+import { getTags } from "@/services/tags";
 import { TagBadge } from "@/components/ui/tag-badge";
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -13,7 +15,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
-  const placeReviews = article.place_id ? await getReviewsByPlace(article.place_id) : [];
+  const [placeReviews, relatedArticles, tags, place] = await Promise.all([
+    article.place_id ? getReviewsByPlace(article.place_id) : [],
+    getRelatedArticles(article, 3),
+    getTags(),
+    article.place_id ? getPlaceById(article.place_id) : null,
+  ]);
+  const tagMap = new Map(tags.map((tag) => [tag.id, tag]));
+  const articleTags = article.tag_ids.map((tagId) => tagMap.get(tagId)).filter(Boolean);
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -21,6 +30,22 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       <main className="mx-auto max-w-3xl px-4 py-8">
         <article className="rounded-2xl border border-zinc-200 bg-white p-5 md:p-8">
           <h1 className="text-2xl font-bold text-zinc-900 md:text-3xl">{article.title}</h1>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+            <span>{new Date(article.created_at).toLocaleDateString("ru")}</span>
+            {place && (
+              <>
+                <span>•</span>
+                <Link href={`/place/${place.id}`} className="font-medium text-blue-600 hover:text-blue-700">
+                  {place.title}
+                </Link>
+              </>
+            )}
+          </div>
+          {articleTags.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {articleTags.map((tag) => tag && <TagBadge key={tag.id} label={tag.name_ru} type={tag.tag_type} />)}
+            </div>
+          )}
           <p className="mt-4 whitespace-pre-line text-zinc-700">{article.description}</p>
 
           {article.photo_urls.length > 0 && (
@@ -46,6 +71,32 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </Link>
           </div>
         </article>
+
+        <section className="mt-5 rounded-2xl border border-zinc-200 bg-white p-5 md:p-8">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-zinc-900">Читайте также</h2>
+            <Link href="/articles" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+              Все места
+            </Link>
+          </div>
+
+          {relatedArticles.length === 0 ? (
+            <p className="mt-3 text-sm text-zinc-500">Других мест пока нет.</p>
+          ) : (
+            <div className="mt-4 grid gap-3">
+              {relatedArticles.map((relatedArticle) => (
+                <Link
+                  key={relatedArticle.id}
+                  href={`/articles/${relatedArticle.slug}`}
+                  className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-3 transition hover:border-blue-200 hover:bg-blue-50/60"
+                >
+                  <h3 className="text-sm font-semibold text-zinc-900">{relatedArticle.title}</h3>
+                  <p className="mt-1 line-clamp-2 text-sm text-zinc-600">{relatedArticle.description}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
 
         {article.place_id && (
           <section className="mt-5 rounded-2xl border border-zinc-200 bg-white p-5 md:p-8">

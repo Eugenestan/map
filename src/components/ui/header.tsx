@@ -12,6 +12,9 @@ export function Header() {
           <MapPin className="h-6 w-6 shrink-0 text-blue-600" />
           <span className="truncate text-lg font-bold text-zinc-900">Русская карта Нячанга</span>
         </Link>
+        <Link href="/articles" className="hidden text-sm font-medium text-zinc-600 hover:text-blue-600 sm:inline">
+          Места
+        </Link>
         <FeedbackHeaderButton />
       </div>
     </header>
