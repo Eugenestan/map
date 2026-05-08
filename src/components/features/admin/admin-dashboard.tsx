@@ -21,6 +21,18 @@ interface AdminDashboardProps {
   adminEmail: string;
 }
 
+interface VisitSummary {
+  todayVisits: number;
+  todayUniqueVisitors: number;
+  weekVisits: number;
+  weekUniqueVisitors: number;
+  topPages: Array<{
+    path: string;
+    visits: number;
+    uniqueVisitors: number;
+  }>;
+}
+
 export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("places");
@@ -34,6 +46,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [visitSummary, setVisitSummary] = useState<VisitSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -44,15 +57,16 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [placesRes, approvedRes, reviewsRes, reportsRes, articlesRes] = await Promise.all([
+      const [placesRes, approvedRes, reviewsRes, reportsRes, articlesRes, visitsRes] = await Promise.all([
         fetch("/api/admin/pending-places"),
         fetch("/api/admin/approved-places"),
         fetch("/api/admin/pending-reviews"),
         fetch("/api/reports"),
         fetch("/api/admin/articles"),
+        fetch("/api/admin/metrics/visits"),
       ]);
 
-      if ([placesRes, approvedRes, reviewsRes, reportsRes, articlesRes].some((response) => response.status === 401)) {
+      if ([placesRes, approvedRes, reviewsRes, reportsRes, articlesRes, visitsRes].some((response) => response.status === 401)) {
         handleUnauthorized();
         return;
       }
@@ -71,6 +85,9 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
 
       const articlesData = await articlesRes.json();
       setArticles(articlesData.data || []);
+
+      const visitsData = await visitsRes.json();
+      setVisitSummary(visitsData.data || null);
     } catch (error) {
       console.error("Ошибка загрузки данных модерации:", error);
     } finally {
@@ -184,6 +201,43 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
           </button>
         </div>
       </div>
+
+      {visitSummary && (
+        <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Сегодня визитов</p>
+            <p className="mt-1 text-2xl font-semibold text-zinc-900">{visitSummary.todayVisits}</p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Сегодня уникальных</p>
+            <p className="mt-1 text-2xl font-semibold text-zinc-900">{visitSummary.todayUniqueVisitors}</p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">7 дней визитов</p>
+            <p className="mt-1 text-2xl font-semibold text-zinc-900">{visitSummary.weekVisits}</p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">7 дней уникальных</p>
+            <p className="mt-1 text-2xl font-semibold text-zinc-900">{visitSummary.weekUniqueVisitors}</p>
+          </div>
+        </div>
+      )}
+
+      {visitSummary && visitSummary.topPages.length > 0 && (
+        <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-4">
+          <h2 className="text-sm font-semibold text-zinc-900">Топ страниц за 7 дней</h2>
+          <div className="mt-3 space-y-2">
+            {visitSummary.topPages.slice(0, 5).map((page) => (
+              <div key={page.path} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm">
+                <span className="truncate text-zinc-700">{page.path}</span>
+                <span className="ml-4 whitespace-nowrap text-zinc-500">
+                  {page.visits} визитов · {page.uniqueVisitors} уник.
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 flex gap-2">
         {tabs.map((currentTab) => (
