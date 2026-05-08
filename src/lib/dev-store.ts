@@ -47,6 +47,7 @@ declare global {
         reports: Report[];
         articles: DevArticleRecord[];
         reviewSessionLikes: Set<string>;
+        visitStats: Map<string, { visits: number; visitors: Set<string> }>;
       }
     | undefined;
 }
@@ -94,6 +95,7 @@ function createInitialStore() {
     reports: [],
     articles: [],
     reviewSessionLikes: new Set<string>(),
+    visitStats: new Map(),
   };
 }
 
@@ -211,4 +213,36 @@ export function updateDevReportStatus(id: string, status: ReportStatus) {
 
   store.reports[index] = { ...store.reports[index], status };
   return true;
+}
+
+export function trackDevVisit(path: string, sessionId: string, day: string, isUniqueVisitor: boolean) {
+  const key = `${day}|${path}`;
+  const store = getDevStore();
+  const current = store.visitStats.get(key) ?? { visits: 0, visitors: new Set<string>() };
+  current.visits += 1;
+  if (isUniqueVisitor) {
+    current.visitors.add(sessionId);
+  }
+  store.visitStats.set(key, current);
+}
+
+export function listDevVisitStats(days = 7) {
+  const store = getDevStore();
+  const from = new Date();
+  from.setUTCHours(0, 0, 0, 0);
+  from.setUTCDate(from.getUTCDate() - Math.max(days - 1, 0));
+  const fromKey = from.toISOString().slice(0, 10);
+
+  return [...store.visitStats.entries()]
+    .map(([key, value]) => {
+      const [day, path] = key.split("|");
+      return {
+        day,
+        path,
+        visits: value.visits,
+        unique_visitors: value.visitors.size,
+      };
+    })
+    .filter((row) => row.day >= fromKey)
+    .sort((a, b) => (a.day === b.day ? a.path.localeCompare(b.path) : b.day.localeCompare(a.day)));
 }

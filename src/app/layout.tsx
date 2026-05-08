@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@/components/ui/analytics";
+import { VisitTracker } from "@/components/ui/visit-tracker";
 import { FeedbackProvider, FeedbackFab } from "@/components/features/feedback/feedback-widget";
 import "./globals.css";
 
@@ -84,6 +85,7 @@ export default function RootLayout({
           {children}
           <FeedbackFab />
         </FeedbackProvider>
+        <VisitTracker />
         <Analytics />
       </body>
     </html>
