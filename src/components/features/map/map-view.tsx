@@ -25,6 +25,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   "cat-11": "#6b7280",
   "cat-12": "#0d9488",
   "cat-13": "#7c3aed",
+  "cat-14": "#15803d",
 };
 
 function createIcon(categoryId: string, icon: string, options?: { recommendedGlow?: boolean }) {

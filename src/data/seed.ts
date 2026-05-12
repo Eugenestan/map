@@ -14,6 +14,7 @@ export const CATEGORIES: Category[] = [
   { id: "cat-11", slug: "other", name_ru: "Другое", icon: "📍", sort_order: 11, is_active: true },
   { id: "cat-12", slug: "atm", name_ru: "Банкоматы", icon: "🏧", sort_order: 12, is_active: true },
   { id: "cat-13", slug: "sim-cards", name_ru: "Симкарты", icon: "📶", sort_order: 13, is_active: true },
+  { id: "cat-14", slug: "sport", name_ru: "Спорт", icon: "⚽", sort_order: 14, is_active: true },
 ];
 
 export const TAGS: Tag[] = [
