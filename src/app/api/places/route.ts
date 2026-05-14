@@ -6,6 +6,9 @@ import { checkRateLimit, createRateLimitResponse, getClientIp } from "@/lib/rate
 import { verifyTurnstileOrResponse } from "@/lib/turnstile";
 import type { PlacesFilter } from "@/types";
 
+/** TEMP: выключено по запросу — вернуть `true`, когда попросят включить лимит снова */
+const CREATE_PLACE_RATE_LIMIT_ENABLED = false;
+
 export async function GET(req: NextRequest) {
   try {
     const params = req.nextUrl.searchParams;
@@ -54,13 +57,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const rateLimit = checkRateLimit({
-      key: `create-place:${getClientIp(req)}`,
-      limit: 5,
-      windowMs: 15 * 60 * 1000,
-    });
-    if (!rateLimit.allowed) {
-      return createRateLimitResponse("Слишком много заявок на добавление места. Попробуйте позже.", rateLimit.retryAfterMs);
+    if (CREATE_PLACE_RATE_LIMIT_ENABLED) {
+      const rateLimit = checkRateLimit({
+        key: `create-place:${getClientIp(req)}`,
+        limit: 5,
+        windowMs: 15 * 60 * 1000,
+      });
+      if (!rateLimit.allowed) {
+        return createRateLimitResponse("Слишком много заявок на добавление места. Попробуйте позже.", rateLimit.retryAfterMs);
+      }
     }
 
     const body = await req.json();
