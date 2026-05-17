@@ -56,7 +56,6 @@ export const TAGS: Tag[] = [
   { id: "tag-28", slug: "russian-kindergarten", name_ru: "Русский детский сад", tag_type: "language", is_active: true, sort_order: 28 },
   // Новые теги (еда / полезность)
   { id: "tag-29", slug: "vietnamese-food", name_ru: "Вьетнамская еда", tag_type: "food", is_active: true, sort_order: 29 },
-  { id: "tag-30", slug: "late-hours-food", name_ru: "Работает допоздна", tag_type: "food", is_active: true, sort_order: 30 },
   { id: "tag-31", slug: "coffee-shop", name_ru: "Кофейня", tag_type: "food", is_active: true, sort_order: 31 },
   { id: "tag-32", slug: "insurance-accepted", name_ru: "Работают по страховке", tag_type: "useful", is_active: true, sort_order: 32 },
   { id: "tag-33", slug: "good-exchange-rate", name_ru: "Хороший курс", tag_type: "useful", is_active: true, sort_order: 33 },
