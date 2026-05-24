@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getPlaces } from "@/services/places";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nhatrang.guide";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vietradar.com";
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

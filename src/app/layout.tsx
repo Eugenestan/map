@@ -10,7 +10,7 @@ const inter = Inter({
   subsets: ["latin", "cyrillic"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nhatrang.guide";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vietradar.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const place = await getPlaceById(id);
   if (!place) return {};
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://nhatrang.guide";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vietradar.com";
   const title = `${place.title} — ${place.category?.name_ru ?? "место"} в Нячанге`;
   const description =
     place.description
