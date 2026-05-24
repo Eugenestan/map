@@ -54,3 +54,7 @@ next-env.d.ts
 
 # старая копия проекта (не путать с деплоем)
 /map
+
+# локальные черновики, roadmap и планы (не в git)
+/docs/local/
+ROADMAP.md
