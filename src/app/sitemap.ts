@@ -1,28 +1,60 @@
 import type { MetadataRoute } from "next";
+import { getArticles } from "@/services/articles";
+import { getCategories } from "@/services/categories";
 import { getPlaces } from "@/services/places";
+import { SITE_URL } from "@/lib/seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vietradar.com";
-
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: siteUrl,
+      url: SITE_URL,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
     },
+    {
+      url: `${SITE_URL}/articles`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
   ];
 
-  try {
-    const places = await getPlaces({});
-    const placeRoutes: MetadataRoute.Sitemap = places.map((place) => ({
-      url: `${siteUrl}/place/${place.id}`,
-      lastModified: place.last_verified_at ? new Date(place.last_verified_at) : new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    }));
-    return [...staticRoutes, ...placeRoutes];
-  } catch {
-    return staticRoutes;
-  }
+  const [placesResult, articlesResult, categoriesResult] = await Promise.allSettled([
+    getPlaces({ limit: 1000 }),
+    getArticles({ limit: 1000 }),
+    getCategories(),
+  ]);
+
+  const placeRoutes: MetadataRoute.Sitemap =
+    placesResult.status === "fulfilled"
+      ? placesResult.value.map((place) => ({
+          url: `${SITE_URL}/place/${place.id}`,
+          lastModified: place.last_verified_at ? new Date(place.last_verified_at) : new Date(),
+          changeFrequency: "weekly" as const,
+          priority: 0.8,
+        }))
+      : [];
+
+  const articleRoutes: MetadataRoute.Sitemap =
+    articlesResult.status === "fulfilled"
+      ? articlesResult.value.map((article) => ({
+          url: `${SITE_URL}/articles/${article.slug}`,
+          lastModified: new Date(article.updated_at || article.created_at),
+          changeFrequency: "monthly" as const,
+          priority: 0.7,
+        }))
+      : [];
+
+  const categoryRoutes: MetadataRoute.Sitemap =
+    categoriesResult.status === "fulfilled"
+      ? categoriesResult.value.map((category) => ({
+          url: `${SITE_URL}/category/${category.slug}`,
+          lastModified: new Date(),
+          changeFrequency: "weekly" as const,
+          priority: 0.75,
+        }))
+      : [];
+
+  return [...staticRoutes, ...categoryRoutes, ...placeRoutes, ...articleRoutes];
 }

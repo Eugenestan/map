@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import type { PlaceWithDetails, Category, Tag } from "@/types";
 import { Header } from "@/components/ui/header";
@@ -17,6 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PlaceCardSkeleton } from "@/components/ui/loading-skeleton";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { AddPlaceInput } from "@/schemas";
+import { CATEGORIES } from "@/data/seed";
 import { Plus, SlidersHorizontal, List, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -26,6 +28,10 @@ const MapView = dynamic(
 );
 
 type ModalType = "place-detail" | "add-place" | "add-review" | "report" | "filters" | null;
+
+const HOME_SEO_CATEGORIES = CATEGORIES.filter((category) =>
+  ["doctor", "pharmacy", "food", "exchange", "guide", "beauty", "danger", "landmarks"].includes(category.slug),
+);
 
 export default function HomePage() {
   const [places, setPlaces] = useState<PlaceWithDetails[]>([]);
@@ -149,7 +155,8 @@ export default function HomePage() {
     : places;
 
   return (
-    <div className="flex min-h-0 h-dvh flex-col">
+    <>
+      <div className="flex min-h-0 h-dvh flex-col">
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
@@ -377,6 +384,55 @@ export default function HomePage() {
           />
         )}
       </Modal>
-    </div>
+      </div>
+      <HomeSeoSection />
+    </>
+  );
+}
+
+function HomeSeoSection() {
+  return (
+    <main className="bg-white">
+      <section className="mx-auto max-w-6xl px-4 py-10 md:py-14">
+        <div className="max-w-3xl">
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">VietRadar</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 md:text-4xl">
+            Русская карта Нячанга: полезные места для туристов и экспатов
+          </h1>
+          <p className="mt-4 text-base leading-7 text-zinc-600">
+            На карте собраны места Нячанга, которые помогают русскоязычным быстрее сориентироваться в городе: врачи,
+            аптеки, обменники, кафе с русским меню, гиды, салоны красоты, достопримечательности и предупреждения об
+            опасных зонах.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {HOME_SEO_CATEGORIES.map((category) => (
+            <Link
+              key={category.id}
+              href={`/category/${category.slug}`}
+              className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/60"
+            >
+              <span className="text-2xl" aria-hidden="true">{category.icon}</span>
+              <h2 className="mt-3 text-lg font-semibold text-zinc-900">{category.name_ru} в Нячанге</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                Адреса, контакты, отзывы и отметки о русскоязычном сервисе.
+              </p>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+          <h2 className="text-xl font-semibold text-zinc-900">Что можно найти на карте</h2>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">
+            Ищите по названию, категории или полезным отметкам: «говорят по-русски», «есть русский врач», «хороший
+            курс», «работают по страховке», «можно с детьми». Для подробных подборок откройте раздел{" "}
+            <Link href="/articles" className="font-medium text-blue-700 hover:text-blue-800">
+              «Интересные места»
+            </Link>.
+          </p>
+        </div>
+      </section>
+    </main>
   );
 }

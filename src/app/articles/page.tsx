@@ -1,10 +1,27 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArticlesFilters } from "@/components/features/articles/articles-filters";
 import { Header } from "@/components/ui/header";
 import { TagBadge } from "@/components/ui/tag-badge";
+import { JsonLd } from "@/components/ui/json-ld";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { getArticles } from "@/services/articles";
 import { getPlaces } from "@/services/places";
 import { getTags } from "@/services/tags";
+
+export const metadata: Metadata = {
+  title: "Интересные места Нячанга",
+  description: "Подборки, обзоры и полезные материалы о местах Нячанга для русскоязычных туристов и экспатов.",
+  alternates: { canonical: `${SITE_URL}/articles` },
+  openGraph: {
+    title: "Интересные места Нячанга",
+    description: "Подборки и полезные материалы о местах Нячанга на Русской карте.",
+    url: `${SITE_URL}/articles`,
+    siteName: SITE_NAME,
+    locale: "ru_RU",
+    type: "website",
+  },
+};
 
 type ArticlesSearchParams = Promise<{
   q?: string;
@@ -35,6 +52,16 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Art
 
   return (
     <div className="min-h-screen bg-zinc-50">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Интересные места Нячанга",
+          url: `${SITE_URL}/articles`,
+          inLanguage: "ru",
+          description: SITE_DESCRIPTION,
+        }}
+      />
       <Header />
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

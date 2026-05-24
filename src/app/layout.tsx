@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@/components/ui/analytics";
+import { JsonLd } from "@/components/ui/json-ld";
 import { VisitTracker } from "@/components/ui/visit-tracker";
 import { FeedbackProvider, FeedbackFab } from "@/components/features/feedback/feedback-widget";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const inter = Inter({
@@ -10,16 +12,13 @@ const inter = Inter({
   subsets: ["latin", "cyrillic"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vietradar.com";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Русская карта Нячанга — полезные места для русскоязычных",
+    default: SITE_TITLE,
     template: "%s | Нячанг для русских",
   },
-  description:
-    "Интерактивная карта Нячанга для русскоязычных туристов и экспатов. Русские врачи, аптеки, кафе с русским меню, обменники, гиды, салоны красоты и другие сервисы.",
+  description: SITE_DESCRIPTION,
   keywords: [
     "Нячанг",
     "Nha Trang",
@@ -35,11 +34,10 @@ export const metadata: Metadata = {
   authors: [{ name: "Русская карта Нячанга" }],
   creator: "Русская карта Нячанга",
   openGraph: {
-    title: "Русская карта Нячанга — полезные места для русскоязычных",
-    description:
-      "Интерактивная карта Нячанга для русскоязычных туристов и экспатов: врачи, кафе, обменники, гиды и многое другое.",
-    url: siteUrl,
-    siteName: "Нячанг для русских",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_NAME,
     locale: "ru_RU",
     type: "website",
     images: [
@@ -58,7 +56,7 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
   },
   alternates: {
-    canonical: siteUrl,
+    canonical: SITE_URL,
   },
   robots: {
     index: true,
@@ -81,6 +79,22 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`${inter.variable} h-full`}>
       <body className="h-full font-sans antialiased">
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: SITE_NAME,
+            alternateName: "VietRadar",
+            url: SITE_URL,
+            inLanguage: "ru",
+            description: SITE_DESCRIPTION,
+            potentialAction: {
+              "@type": "SearchAction",
+              target: `${SITE_URL}/?search={search_term_string}`,
+              "query-input": "required name=search_term_string",
+            },
+          }}
+        />
         <FeedbackProvider>
           {children}
           <FeedbackFab />

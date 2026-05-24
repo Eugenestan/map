@@ -1,13 +1,51 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/ui/header";
+import { JsonLd } from "@/components/ui/json-ld";
 import { getArticleBySlug, getRelatedArticles } from "@/services/articles";
 import { getPlaceById } from "@/services/places";
 import { getReviewsByPlace } from "@/services/reviews";
 import { getTags } from "@/services/tags";
 import { TagBadge } from "@/components/ui/tag-badge";
+import { SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/seo";
 
-export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+interface ArticlePageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const article = await getArticleBySlug(slug);
+
+  if (!article) return {};
+
+  const description = article.description.length > 155 ? `${article.description.slice(0, 152)}...` : article.description;
+  const image = article.photo_urls[0] ? absoluteUrl(article.photo_urls[0]) : `${SITE_URL}/og-image.png`;
+
+  return {
+    title: article.title,
+    description,
+    alternates: { canonical: `${SITE_URL}/articles/${article.slug}` },
+    openGraph: {
+      title: article.title,
+      description,
+      url: `${SITE_URL}/articles/${article.slug}`,
+      siteName: SITE_NAME,
+      locale: "ru_RU",
+      type: "article",
+      images: [{ url: image, width: 1200, height: 630, alt: article.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description,
+      images: [image],
+    },
+  };
+}
+
+export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
 
@@ -26,6 +64,35 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="min-h-screen bg-zinc-50">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: article.title,
+          description: article.description,
+          image: article.photo_urls.length > 0 ? article.photo_urls.map(absoluteUrl) : [`${SITE_URL}/og-image.png`],
+          datePublished: article.created_at,
+          dateModified: article.updated_at,
+          inLanguage: "ru",
+          mainEntityOfPage: `${SITE_URL}/articles/${article.slug}`,
+          publisher: {
+            "@type": "Organization",
+            name: SITE_NAME,
+            url: SITE_URL,
+          },
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_URL },
+            { "@type": "ListItem", position: 2, name: "Интересные места", item: `${SITE_URL}/articles` },
+            { "@type": "ListItem", position: 3, name: article.title, item: `${SITE_URL}/articles/${article.slug}` },
+          ],
+        }}
+      />
       <Header />
       <main className="mx-auto max-w-3xl px-4 py-8">
         <article className="rounded-2xl border border-zinc-200 bg-white p-5 md:p-8">
