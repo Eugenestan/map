@@ -1,7 +1,7 @@
 import { assertDatabaseConfigured, buildInClause, execute, isDatabaseConfigured, normalizeBoolean, normalizeTimestamp, withTransaction } from "@/lib/db";
 import { CATEGORIES, MOCK_PLACES, MOCK_REVIEWS, TAGS } from "@/data/seed";
 import { getDevPlaceById, insertDevPlace, listDevPlaces, listDevReviews, updateDevPlace } from "@/lib/dev-store";
-import type { Place, PlaceWithDetails, PlacesFilter, PlaceTagAggregate, Category, Tag } from "@/types";
+import type { Place, PlaceListItem, PlaceWithDetails, PlacesFilter, PlaceTagAggregate, Category, Tag } from "@/types";
 import { v4 as uuid } from "uuid";
 
 function slugify(text: string): string {
@@ -372,6 +372,25 @@ export async function getPlaces(filter: PlacesFilter = {}): Promise<PlaceWithDet
 
   const rows = await execute<PlaceBaseRow>(sql, params);
   return hydratePlaces(rows);
+}
+
+export async function getPlaceListItems(limit = 500): Promise<PlaceListItem[]> {
+  if (!isDatabaseConfigured()) {
+    return applyMockPlacesFilter(getMockPlacesCollection(), { limit })
+      .map(({ id, title }) => ({ id, title }))
+      .sort((a, b) => a.title.localeCompare(b.title, "ru"));
+  }
+
+  return execute<PlaceListItem>(
+    `
+    SELECT id, title
+    FROM places
+    WHERE status = 'approved'
+    ORDER BY title ASC
+    LIMIT $1
+  `,
+    [limit],
+  );
 }
 
 export async function getPlaceById(id: string): Promise<PlaceWithDetails | null> {

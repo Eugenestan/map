@@ -60,6 +60,8 @@ export interface PlaceWithDetails extends Place {
   reviews_count: number;
 }
 
+export type PlaceListItem = Pick<Place, "id" | "title">;
+
 export interface PlaceTagAggregate {
   id: string;
   place_id: string;

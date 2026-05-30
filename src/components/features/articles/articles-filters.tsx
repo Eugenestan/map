@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useRef } from "react";
-import type { PlaceWithDetails, Tag } from "@/types";
+import type { PlaceListItem, Tag } from "@/types";
 
 interface ArticlesFiltersProps {
   search: string;
   selectedPlace: string;
   selectedTags: string[];
-  places: PlaceWithDetails[];
+  places: PlaceListItem[];
   tags: Tag[];
   articlesCount: number;
   hasFilters: boolean;

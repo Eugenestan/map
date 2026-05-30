@@ -6,7 +6,7 @@ import { TagBadge } from "@/components/ui/tag-badge";
 import { JsonLd } from "@/components/ui/json-ld";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { getArticles } from "@/services/articles";
-import { getPlaces } from "@/services/places";
+import { getPlaceListItems } from "@/services/places";
 import { getTags } from "@/services/tags";
 
 export const metadata: Metadata = {
@@ -42,7 +42,7 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Art
 
   const [articles, places, tags] = await Promise.all([
     getArticles({ search, placeId: selectedPlace, tagIds: selectedTags, limit: 100 }),
-    getPlaces({ limit: 500 }),
+    getPlaceListItems(500),
     getTags(),
   ]);
 
