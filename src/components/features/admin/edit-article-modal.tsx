@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Modal } from "@/components/ui/modal";
+import { ArticleTextEditor } from "@/components/features/admin/article-text-editor";
 import type { Article, PlaceWithDetails, Tag } from "@/types";
 
 const MapView = dynamic(
@@ -125,16 +126,7 @@ export function EditArticleModal({
           />
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700">Описание *</label>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={5}
-            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            required
-          />
-        </div>
+        <ArticleTextEditor label="Описание *" value={description} onChange={setDescription} required />
 
         <div>
           <label className="mb-1 block text-sm font-medium text-zinc-700">Теги для добавления</label>

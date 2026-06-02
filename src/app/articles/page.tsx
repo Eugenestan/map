@@ -4,6 +4,7 @@ import { ArticlesFilters } from "@/components/features/articles/articles-filters
 import { Header } from "@/components/ui/header";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { JsonLd } from "@/components/ui/json-ld";
+import { FormattedText } from "@/components/ui/formatted-text";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { getArticles } from "@/services/articles";
 import { getPlaceListItems } from "@/services/places";
@@ -119,7 +120,7 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Art
                           {place && <span className="truncate">{place.title}</span>}
                         </div>
                         <h2 className="mt-2 text-lg font-semibold text-zinc-900 group-hover:text-blue-700">{article.title}</h2>
-                        <p className="mt-2 line-clamp-3 text-sm text-zinc-600">{article.description}</p>
+                        <FormattedText text={article.description} className="mt-2 line-clamp-3 text-sm text-zinc-600" />
                         {articleTags.length > 0 && (
                           <div className="mt-4 flex flex-wrap gap-1.5">
                             {articleTags.slice(0, 4).map((tag) => tag && <TagBadge key={tag.id} label={tag.name_ru} type={tag.tag_type} />)}

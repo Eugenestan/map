@@ -8,6 +8,7 @@ import { getPlaceById } from "@/services/places";
 import { getReviewsByPlace } from "@/services/reviews";
 import { getTags } from "@/services/tags";
 import { TagBadge } from "@/components/ui/tag-badge";
+import { FormattedText, stripArticleFormatting } from "@/components/ui/formatted-text";
 import { SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/seo";
 
 interface ArticlePageProps {
@@ -20,7 +21,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
   if (!article) return {};
 
-  const description = article.description.length > 155 ? `${article.description.slice(0, 152)}...` : article.description;
+  const plainDescription = stripArticleFormatting(article.description);
+  const description = plainDescription.length > 155 ? `${plainDescription.slice(0, 152)}...` : plainDescription;
   const image = article.photo_urls[0] ? absoluteUrl(article.photo_urls[0]) : `${SITE_URL}/og-image.png`;
 
   return {
@@ -61,6 +63,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   ]);
   const tagMap = new Map(tags.map((tag) => [tag.id, tag]));
   const articleTags = article.tag_ids.map((tagId) => tagMap.get(tagId)).filter(Boolean);
+  const plainDescription = stripArticleFormatting(article.description);
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -69,7 +72,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           "@context": "https://schema.org",
           "@type": "Article",
           headline: article.title,
-          description: article.description,
+          description: plainDescription,
           image: article.photo_urls.length > 0 ? article.photo_urls.map(absoluteUrl) : [`${SITE_URL}/og-image.png`],
           datePublished: article.created_at,
           dateModified: article.updated_at,
@@ -113,7 +116,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               {articleTags.map((tag) => tag && <TagBadge key={tag.id} label={tag.name_ru} type={tag.tag_type} />)}
             </div>
           )}
-          <p className="mt-4 whitespace-pre-line text-zinc-700">{article.description}</p>
+          <FormattedText text={article.description} className="mt-4 whitespace-pre-line text-zinc-700" />
 
           {article.photo_urls.length > 0 && (
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -158,7 +161,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   className="rounded-xl border border-zinc-100 bg-zinc-50/70 p-3 transition hover:border-blue-200 hover:bg-blue-50/60"
                 >
                   <h3 className="text-sm font-semibold text-zinc-900">{relatedArticle.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-zinc-600">{relatedArticle.description}</p>
+                  <FormattedText text={relatedArticle.description} className="mt-1 line-clamp-2 text-sm text-zinc-600" />
                 </Link>
               ))}
             </div>

@@ -7,6 +7,7 @@ import { ApprovedPlaceEditor } from "@/components/features/admin/approved-place-
 import { PendingPlaceModerationModal } from "@/components/features/admin/pending-place-moderation-modal";
 import { AddArticleModal } from "@/components/features/admin/add-article-modal";
 import { EditArticleModal } from "@/components/features/admin/edit-article-modal";
+import { FormattedText } from "@/components/ui/formatted-text";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { cn } from "@/lib/cn";
 import type { Article, PlaceWithDetails, Report, ReviewWithTags, Tag } from "@/types";
@@ -468,7 +469,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-zinc-900">{article.title}</h3>
-                    <p className="mt-1 text-sm text-zinc-600 line-clamp-2">{article.description}</p>
+                    <FormattedText text={article.description} className="mt-1 line-clamp-2 text-sm text-zinc-600" />
                     <p className="mt-2 text-xs text-zinc-400">
                       /articles/{article.slug} · {article.photo_urls.length} фото
                     </p>
