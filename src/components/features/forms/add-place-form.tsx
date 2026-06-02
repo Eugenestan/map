@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 /** Поля формы без координат — lat/lng обрабатываются отдельным полем. */
 type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
 
+const COORDINATE_INPUT_MAX_LENGTH = 40;
 const formatCoordinates = (lat: number, lng: number) => `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
 const parseCoordinate = (value: string) => {
@@ -25,14 +26,17 @@ const parseCoordinatesInput = (value: string): [number, number] | null => {
     return null;
   }
 
-  const spaceParts = trimmed.split(/\s+/).filter(Boolean);
-  const parts = spaceParts.length === 2 ? spaceParts : trimmed.split(/[;,]/).map((part) => part.trim()).filter(Boolean);
-  if (parts.length !== 2) {
+  if (trimmed.length > COORDINATE_INPUT_MAX_LENGTH) {
     return null;
   }
 
-  const lat = parseCoordinate(parts[0]);
-  const lng = parseCoordinate(parts[1]);
+  const matches = trimmed.match(/[-+]?\d+(?:[.,]\d+)?/g);
+  if (!matches || matches.length !== 2) {
+    return null;
+  }
+
+  const lat = parseCoordinate(matches[0]);
+  const lng = parseCoordinate(matches[1]);
   if (lat === null || lng === null || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
     return null;
   }
@@ -156,6 +160,11 @@ export function AddPlaceForm({
 
     if (!value.trim()) {
       setCoordinateError("");
+      return;
+    }
+
+    if (value.trim().length > COORDINATE_INPUT_MAX_LENGTH) {
+      setCoordinateError(`Введите не больше ${COORDINATE_INPUT_MAX_LENGTH} символов`);
       return;
     }
 
@@ -309,6 +318,7 @@ export function AddPlaceForm({
             className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-zinc-400"
             placeholder="12.24646, 109.19218"
             inputMode="decimal"
+            maxLength={COORDINATE_INPUT_MAX_LENGTH}
           />
           <button
             type="button"
