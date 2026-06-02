@@ -97,8 +97,14 @@ export default function HomePage() {
 
   const handlePick = (lat: number, lng: number) => {
     setPickedLocation([lat, lng]);
+    setFlyTo([lat, lng]);
     setPickMode(false);
     setActiveModal("add-place");
+  };
+
+  const handleManualCoordinatesChange = (lat: number, lng: number) => {
+    setPickedLocation([lat, lng]);
+    setFlyTo([lat, lng]);
   };
 
   const handleAddPlaceSubmit = async (data: AddPlaceInput, meta?: { turnstileToken?: string | null }) => {
@@ -354,6 +360,7 @@ export default function HomePage() {
           lng={pickedLocation?.[1]}
           initialValues={placeFormDraft}
           onSubmit={handleAddPlaceSubmit}
+          onCoordinatesChange={handleManualCoordinatesChange}
           onBeforePickLocation={(snap) => setPlaceFormDraft(snap)}
           onPickLocation={() => {
             setPickMode(true);

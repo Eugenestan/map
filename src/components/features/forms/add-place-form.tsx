@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import type { AddPlaceInput } from "@/schemas";
 import type { Category, Tag } from "@/types";
@@ -9,14 +9,43 @@ import { MapPin, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ReactNode } from "react";
 
-/** Поля формы без координат — lat/lng только из пропсов. */
+/** Поля формы без координат — lat/lng обрабатываются отдельным полем. */
 type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
+
+const formatCoordinates = (lat: number, lng: number) => `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+const parseCoordinate = (value: string) => {
+  const parsed = Number(value.trim().replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseCoordinatesInput = (value: string): [number, number] | null => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const spaceParts = trimmed.split(/\s+/).filter(Boolean);
+  const parts = spaceParts.length === 2 ? spaceParts : trimmed.split(/[;,]/).map((part) => part.trim()).filter(Boolean);
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const lat = parseCoordinate(parts[0]);
+  const lng = parseCoordinate(parts[1]);
+  if (lat === null || lng === null || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    return null;
+  }
+
+  return [lat, lng];
+};
 
 interface AddPlaceFormProps {
   lat?: number;
   lng?: number;
   onSubmit: (data: AddPlaceInput, meta?: { turnstileToken?: string | null }) => Promise<void>;
   onPickLocation?: () => void;
+  onCoordinatesChange?: (lat: number, lng: number) => void;
   /** Сохранить введённые данные перед выбором точки на карте (родитель подставит их в initialValues). */
   onBeforePickLocation?: (snapshot: Partial<AddPlaceFormFields>) => void;
   initialValues?: Partial<AddPlaceFormFields>;
@@ -34,6 +63,7 @@ export function AddPlaceForm({
   lng,
   onSubmit,
   onPickLocation,
+  onCoordinatesChange,
   onBeforePickLocation,
   initialValues,
   submitLabel = "Отправить на модерацию",
@@ -51,8 +81,12 @@ export function AddPlaceForm({
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const coordsRef = useRef({ lat, lng });
-  coordsRef.current = { lat, lng };
+  const [coordinateInput, setCoordinateInput] = useState(() =>
+    typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng)
+      ? formatCoordinates(lat, lng)
+      : "",
+  );
+  const [coordinateError, setCoordinateError] = useState("");
 
   const {
     register,
@@ -81,6 +115,17 @@ export function AddPlaceForm({
   }, []);
 
   useEffect(() => {
+    if (typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng)) {
+      setCoordinateInput(formatCoordinates(lat, lng));
+      setCoordinateError("");
+      return;
+    }
+
+    setCoordinateInput("");
+    setCoordinateError("");
+  }, [lat, lng]);
+
+  useEffect(() => {
     if (!initialValues) {
       return;
     }
@@ -105,6 +150,25 @@ export function AddPlaceForm({
     onPickLocation?.();
   };
 
+  const handleCoordinateInputChange = (value: string) => {
+    setCoordinateInput(value);
+    setSubmitError("");
+
+    if (!value.trim()) {
+      setCoordinateError("");
+      return;
+    }
+
+    const parsed = parseCoordinatesInput(value);
+    if (!parsed) {
+      setCoordinateError("Введите координаты в формате 12.24646, 109.19218");
+      return;
+    }
+
+    setCoordinateError("");
+    onCoordinatesChange?.(parsed[0], parsed[1]);
+  };
+
   const toggleTag = (tagId: string) => {
     setSelectedTags((prev) => {
       const next = prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId];
@@ -121,11 +185,10 @@ export function AddPlaceForm({
         throw new Error("Подтвердите, что вы не бот");
       }
 
-      const { lat: propLat, lng: propLng } = coordsRef.current;
-      const latOk = typeof propLat === "number" && Number.isFinite(propLat);
-      const lngOk = typeof propLng === "number" && Number.isFinite(propLng);
-      if (!latOk || !lngOk) {
-        setSubmitError("Укажите точку на карте");
+      const parsedCoordinates = parseCoordinatesInput(coordinateInput);
+      if (!parsedCoordinates) {
+        setCoordinateError("Введите координаты в формате 12.24646, 109.19218");
+        setSubmitError("Укажите точку на карте или введите координаты вручную");
         return;
       }
 
@@ -152,8 +215,8 @@ export function AddPlaceForm({
       const payload: AddPlaceInput = {
         title,
         category_id,
-        lat: propLat,
-        lng: propLng,
+        lat: parsedCoordinates[0],
+        lng: parsedCoordinates[1],
         address_text: opt(data.address_text),
         description: description.length > 0 ? description : undefined,
         tags: tags.length > 0 ? tags : undefined,
@@ -229,28 +292,36 @@ export function AddPlaceForm({
 
       <div>
         <label className="block text-sm font-medium text-zinc-700 mb-1">Точка на карте *</label>
-        {typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng) ? (
-          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2 border border-green-200">
-            <MapPin className="h-4 w-4" />
-            <span>{lat.toFixed(5)}, {lng.toFixed(5)}</span>
-            <button
-              type="button"
-              onClick={openLocationPicker}
-              className="ml-auto text-xs underline text-green-700 cursor-pointer"
-            >
-              Изменить
-            </button>
-          </div>
-        ) : (
+        <div
+          className={cn(
+            "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm",
+            coordinateError
+              ? "border-red-300 bg-red-50 text-red-700"
+              : parseCoordinatesInput(coordinateInput)
+                ? "border-green-200 bg-green-50 text-green-700"
+                : "border-zinc-200 bg-white text-zinc-600",
+          )}
+        >
+          <MapPin className="h-4 w-4 flex-shrink-0" />
+          <input
+            value={coordinateInput}
+            onChange={(event) => handleCoordinateInputChange(event.target.value)}
+            className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-zinc-400"
+            placeholder="12.24646, 109.19218"
+            inputMode="decimal"
+          />
           <button
             type="button"
             onClick={openLocationPicker}
-            className="w-full rounded-lg border-2 border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 hover:border-blue-400 hover:text-blue-600 transition-colors cursor-pointer"
+            className={cn(
+              "ml-auto flex-shrink-0 text-xs underline cursor-pointer",
+              coordinateError ? "text-red-700" : "text-green-700",
+            )}
           >
-            <MapPin className="h-5 w-5 mx-auto mb-1" />
-            Нажмите, чтобы указать точку на карте
+            {coordinateInput ? "Изменить" : "Выбрать"}
           </button>
-        )}
+        </div>
+        {coordinateError && <p className="text-xs text-red-500 mt-1">{coordinateError}</p>}
       </div>
 
       <div>
