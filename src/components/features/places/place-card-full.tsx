@@ -5,6 +5,7 @@ import type { PlaceWithDetails, ReviewWithTags } from "@/types";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { getPlacePath } from "@/lib/place-url";
 import { computePlaceTrust } from "@/lib/trust";
 import { MapPin, Phone, Globe, Clock, MessageSquare, Flag, Navigation, Share2, ThumbsUp, Send } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -87,7 +88,7 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
   };
 
   const handleShare = async () => {
-    const placeUrl = `${window.location.origin}/place/${place.id}`;
+    const placeUrl = `${window.location.origin}${getPlacePath(place)}`;
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
     const shareText = [
       `Место: ${place.title}`,

@@ -1,16 +1,12 @@
 import { assertDatabaseConfigured, buildInClause, execute, isDatabaseConfigured, normalizeBoolean, normalizeTimestamp, withTransaction } from "@/lib/db";
 import { CATEGORIES, MOCK_PLACES, MOCK_REVIEWS, TAGS } from "@/data/seed";
 import { getDevPlaceById, insertDevPlace, listDevPlaces, listDevReviews, updateDevPlace } from "@/lib/dev-store";
+import { slugifyPlaceTitle } from "@/lib/place-url";
 import type { Place, PlaceListItem, PlaceWithDetails, PlacesFilter, PlaceTagAggregate, Category, Tag } from "@/types";
 import { v4 as uuid } from "uuid";
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
+  return slugifyPlaceTitle(text);
 }
 
 interface PlaceBaseRow extends Omit<Place, "is_verified" | "last_verified_at" | "created_at" | "updated_at" | "admin_recommended"> {
@@ -395,7 +391,10 @@ export async function getPlaceListItems(limit = 500): Promise<PlaceListItem[]> {
 
 export async function getPlaceById(id: string): Promise<PlaceWithDetails | null> {
   if (!isDatabaseConfigured()) {
-    const devPlace = getDevPlaceById(id);
+    const devPlace =
+      getDevPlaceById(id) ||
+      listDevPlaces().find((place) => place.slug === id || slugifyPlaceTitle(place.title) === id) ||
+      null;
     if (!devPlace) {
       return null;
     }
@@ -406,14 +405,27 @@ export async function getPlaceById(id: string): Promise<PlaceWithDetails | null>
   const rows = await execute<PlaceBaseRow>(`
     SELECT p.*, c.id as cat_id, c.slug as cat_slug, c.name_ru as cat_name, c.icon as cat_icon, c.sort_order as cat_sort, c.is_active as cat_active
     FROM places p JOIN categories c ON p.category_id = c.id
-    WHERE p.id = $1
+    WHERE p.id = $1 OR p.slug = $1
+    ORDER BY p.updated_at DESC, p.created_at DESC
+    LIMIT 1
   `, [id]);
 
-  if (rows.length === 0) {
-    return null;
+  if (rows.length > 0) {
+    const [place] = await hydratePlaces(rows);
+    return place ?? null;
   }
 
-  const [place] = await hydratePlaces(rows);
+  const fallbackRows = await execute<PlaceBaseRow>(`
+    SELECT p.*, c.id as cat_id, c.slug as cat_slug, c.name_ru as cat_name, c.icon as cat_icon, c.sort_order as cat_sort, c.is_active as cat_active
+    FROM places p JOIN categories c ON p.category_id = c.id
+    WHERE p.status = 'approved'
+    ORDER BY p.updated_at DESC, p.created_at DESC
+    LIMIT 1000
+  `);
+  const matchedRow = fallbackRows.find((row) => slugifyPlaceTitle(row.title) === id);
+  if (!matchedRow) return null;
+
+  const [place] = await hydratePlaces([matchedRow]);
   return place ?? null;
 }
 

@@ -9,6 +9,7 @@ import { getReviewsByPlace } from "@/services/reviews";
 import { getTags } from "@/services/tags";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { FormattedText, stripArticleFormatting } from "@/components/ui/formatted-text";
+import { getPlacePath } from "@/lib/place-url";
 import { SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/seo";
 
 interface ArticlePageProps {
@@ -105,7 +106,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             {place && (
               <>
                 <span>•</span>
-                <Link href={`/place/${place.id}`} className="font-medium text-blue-600 hover:text-blue-700">
+                <Link href={getPlacePath(place)} className="font-medium text-blue-600 hover:text-blue-700">
                   {place.title}
                 </Link>
               </>

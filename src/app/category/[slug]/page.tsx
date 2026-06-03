@@ -7,6 +7,7 @@ import { TagBadge } from "@/components/ui/tag-badge";
 import { CATEGORIES } from "@/data/seed";
 import { getCategories } from "@/services/categories";
 import { getPlaces } from "@/services/places";
+import { getPlacePath } from "@/lib/place-url";
 import { getCategorySeo, SITE_NAME, SITE_URL } from "@/lib/seo";
 import type { Category } from "@/types";
 
@@ -130,7 +131,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               {places.map((place) => (
                 <Link
                   key={place.id}
-                  href={`/place/${place.id}`}
+                  href={getPlacePath(place)}
                   className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-3">

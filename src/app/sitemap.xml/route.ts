@@ -2,6 +2,7 @@ import { getArticles } from "@/services/articles";
 import { getCategories } from "@/services/categories";
 import { getPlaces } from "@/services/places";
 import { execute, isDatabaseConfigured, normalizeTimestamp } from "@/lib/db";
+import { getPlacePath } from "@/lib/place-url";
 import { SITE_URL } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,8 @@ interface ArticleSitemapRow {
 
 interface PlaceSitemapRow {
   id: string;
+  slug: string;
+  title: string;
   created_at: string | Date;
   updated_at: string | Date;
   last_verified_at: string | Date | null;
@@ -77,7 +80,7 @@ async function getPlaceRoutes(): Promise<SitemapEntry[]> {
   if (isDatabaseConfigured()) {
     const rows = await execute<PlaceSitemapRow>(
       `
-      SELECT id, created_at, updated_at, last_verified_at
+      SELECT id, slug, title, created_at, updated_at, last_verified_at
       FROM places
       WHERE status = 'approved'
       ORDER BY created_at DESC
@@ -86,7 +89,7 @@ async function getPlaceRoutes(): Promise<SitemapEntry[]> {
     );
 
     return rows.map((place) => ({
-      url: `${baseUrl}/place/${encodeURIComponent(place.id)}`,
+      url: `${baseUrl}${getPlacePath(place)}`,
       lastModified: toSafeDate(place.last_verified_at || place.updated_at || place.created_at),
       changeFrequency: "weekly",
       priority: 0.8,
@@ -95,7 +98,7 @@ async function getPlaceRoutes(): Promise<SitemapEntry[]> {
 
   const places = await getPlaces({ limit: 1000 });
   return places.map((place) => ({
-    url: `${baseUrl}/place/${encodeURIComponent(place.id)}`,
+    url: `${baseUrl}${getPlacePath(place)}`,
     lastModified: toSafeDate(place.last_verified_at || place.updated_at || place.created_at),
     changeFrequency: "weekly",
     priority: 0.8,

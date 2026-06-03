@@ -3,6 +3,7 @@ import { getPlaceById } from "@/services/places";
 import { getReviewsByPlace } from "@/services/reviews";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/ui/json-ld";
+import { getPlacePath } from "@/lib/place-url";
 import { SITE_NAME, SITE_URL } from "@/lib/seo";
 import { PlacePageClient } from "./client";
 
@@ -20,15 +21,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     place.description
       ? `${place.description.slice(0, 140)}…`
       : `${place.title} в Нячанге. Адрес, контакты и отзывы на Русской карте Нячанга.`;
+  const url = `${SITE_URL}${getPlacePath(place)}`;
 
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/place/${id}` },
+    alternates: { canonical: url },
     openGraph: {
       title,
       description,
-      url: `${SITE_URL}/place/${id}`,
+      url,
       siteName: SITE_NAME,
       locale: "ru_RU",
       type: "article",
@@ -48,7 +50,8 @@ export default async function PlacePage({ params }: Props) {
   const place = await getPlaceById(id);
   if (!place) notFound();
 
-  const reviews = await getReviewsByPlace(id);
+  const reviews = await getReviewsByPlace(place.id);
+  const url = `${SITE_URL}${getPlacePath(place)}`;
 
   return (
     <>
@@ -58,7 +61,7 @@ export default async function PlacePage({ params }: Props) {
           "@type": "LocalBusiness",
           name: place.title,
           description: place.description || `${place.title} в Нячанге на ${SITE_NAME}.`,
-          url: `${SITE_URL}/place/${place.id}`,
+          url,
           telephone: place.phone || undefined,
           address: place.address_text
             ? {
@@ -84,7 +87,7 @@ export default async function PlacePage({ params }: Props) {
           itemListElement: [
             { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_URL },
             { "@type": "ListItem", position: 2, name: place.category.name_ru, item: `${SITE_URL}/category/${place.category.slug}` },
-            { "@type": "ListItem", position: 3, name: place.title, item: `${SITE_URL}/place/${place.id}` },
+            { "@type": "ListItem", position: 3, name: place.title, item: url },
           ],
         }}
       />
