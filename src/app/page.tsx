@@ -249,7 +249,7 @@ export default function HomePage() {
             pickedLocation={pickedLocation}
             flyTo={flyTo}
             highlightRecommended={recommendedLayerOn}
-            locateButtonClassName="bottom-[calc(max(1.5rem,calc(env(safe-area-inset-bottom,0px)+1.25rem))+11.75rem)] md:bottom-24"
+            locateButtonClassName="bottom-[13.25rem] right-4 w-14 items-center md:bottom-24 md:right-6"
             className="w-full h-full"
           />
 
@@ -268,7 +268,7 @@ export default function HomePage() {
 
           {/* Mobile FAB: safe-area + запас от нижней панели браузера / home indicator */}
           <div
-            className="md:hidden absolute z-[1000] flex flex-col gap-3"
+            className="md:hidden absolute z-[1000] flex flex-col items-center gap-3"
             style={{
               right: "max(1rem, env(safe-area-inset-right, 0px))",
               bottom: "max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem))",
