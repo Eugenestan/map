@@ -10,18 +10,26 @@ function getFeedbackTypeLabel(feedbackType: string): string {
   return FEEDBACK_TYPE_LABELS[feedbackType] ?? feedbackType;
 }
 
-function isSmtpConfigured(): boolean {
-  return Boolean(process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
-}
-
-export async function sendFeedbackEmail(input: {
+type FeedbackInput = {
   name: string;
   email: string;
   feedbackType: string;
   message: string;
-}): Promise<void> {
+};
+
+type Letter = {
+  to: string;
+  from: string;
+  fromName: string;
+  subject: string;
+  text: string;
+  replyTo: string;
+};
+
+function buildLetter(input: FeedbackInput): Letter {
   const to = (process.env.FEEDBACK_TO_EMAIL || "steveji1@gmail.com").trim();
   const from = (process.env.EMAIL_FROM || process.env.SMTP_USER || "").trim();
+  const fromName = (process.env.EMAIL_FROM_NAME || "VietRadar Feedback").trim();
   const typeLabel = getFeedbackTypeLabel(input.feedbackType);
   const subject = `[Обратная связь] ${typeLabel} — ${input.name}`;
   const text = [
@@ -32,17 +40,54 @@ export async function sendFeedbackEmail(input: {
     "Сообщение:",
     input.message,
   ].join("\n");
+  return { to, from, fromName, subject, text, replyTo: input.email };
+}
 
-  if (process.env.NODE_ENV === "development" && !isSmtpConfigured()) {
-    console.info("[feedback] dev: SMTP не настроен, письмо не отправлено", { to, subject, text });
-    return;
+function isBrevoConfigured(): boolean {
+  return Boolean(process.env.BREVO_API_KEY?.trim());
+}
+
+function isSmtpConfigured(): boolean {
+  return Boolean(process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
+}
+
+async function sendViaBrevo(letter: Letter): Promise<void> {
+  if (!letter.from) {
+    throw new Error("Укажите EMAIL_FROM для отправителя (адрес, который Brevo разрешит)");
   }
 
-  if (!isSmtpConfigured()) {
-    throw new Error("SMTP не настроен для отправки обратной связи");
-  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
 
-  if (!from) {
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        "api-key": process.env.BREVO_API_KEY!.trim(),
+      },
+      body: JSON.stringify({
+        sender: { name: letter.fromName, email: letter.from },
+        to: [{ email: letter.to }],
+        replyTo: { email: letter.replyTo },
+        subject: letter.subject,
+        textContent: letter.text,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new Error(`Brevo HTTP ${response.status}: ${detail.slice(0, 300)}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function sendViaSmtp(letter: Letter): Promise<void> {
+  if (!letter.from) {
     throw new Error("Укажите EMAIL_FROM или SMTP_USER для отправителя");
   }
 
@@ -58,13 +103,40 @@ export async function sendFeedbackEmail(input: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    connectionTimeout: 8_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 12_000,
   });
 
   await transporter.sendMail({
-    from,
-    to,
-    replyTo: input.email,
-    subject,
-    text,
+    from: `${letter.fromName} <${letter.from}>`,
+    to: letter.to,
+    replyTo: letter.replyTo,
+    subject: letter.subject,
+    text: letter.text,
   });
+}
+
+export async function sendFeedbackEmail(input: FeedbackInput): Promise<void> {
+  const letter = buildLetter(input);
+
+  if (isBrevoConfigured()) {
+    await sendViaBrevo(letter);
+    return;
+  }
+
+  if (process.env.NODE_ENV === "development" && !isSmtpConfigured()) {
+    console.info("[feedback] dev: транспорт не настроен, письмо не отправлено", {
+      to: letter.to,
+      subject: letter.subject,
+      text: letter.text,
+    });
+    return;
+  }
+
+  if (!isSmtpConfigured()) {
+    throw new Error("Email-транспорт не настроен (нет ни BREVO_API_KEY, ни SMTP_*)");
+  }
+
+  await sendViaSmtp(letter);
 }
