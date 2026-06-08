@@ -39,9 +39,13 @@ else
   exit 1
 fi
 
-echo "[*] Generating new Postgres password (32 random alphanumeric chars)..."
-NEW_PASS=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
-echo "[ok] Password generated."
+echo "[*] Generating new Postgres password (32 hex chars)..."
+NEW_PASS=$(openssl rand -hex 16)
+if [[ -z "$NEW_PASS" || ${#NEW_PASS} -lt 24 ]]; then
+  echo "[!] Generated password looks bogus: \"$NEW_PASS\"" >&2
+  exit 1
+fi
+echo "[ok] Password generated (${#NEW_PASS} chars)."
 
 echo "[*] Saving the new password to $PASSWORD_LOG (chmod 600)..."
 umask 077
