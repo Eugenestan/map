@@ -43,43 +43,53 @@ function buildLetter(input: FeedbackInput): Letter {
   return { to, from, fromName, subject, text, replyTo: input.email };
 }
 
-function isBrevoConfigured(): boolean {
-  return Boolean(process.env.BREVO_API_KEY?.trim());
+function isUnisenderGoConfigured(): boolean {
+  return Boolean(process.env.UNISENDER_GO_API_KEY?.trim());
 }
 
 function isSmtpConfigured(): boolean {
   return Boolean(process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim());
 }
 
-async function sendViaBrevo(letter: Letter): Promise<void> {
+async function sendViaUnisenderGo(letter: Letter): Promise<void> {
   if (!letter.from) {
-    throw new Error("Укажите EMAIL_FROM для отправителя (адрес, который Brevo разрешит)");
+    throw new Error("Укажите EMAIL_FROM (адрес с подтверждённого домена в UniSender Go)");
   }
+
+  // У аккаунтов UniSender Go два дата-центра: go1 и go2. По умолчанию — go1.
+  const host = (process.env.UNISENDER_GO_HOST || "go1.unisender.ru").trim();
+  const endpoint = `https://${host}/ru/transactional/api/v1/email/send.json`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
 
   try {
-    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         accept: "application/json",
         "content-type": "application/json",
-        "api-key": process.env.BREVO_API_KEY!.trim(),
+        "X-API-KEY": process.env.UNISENDER_GO_API_KEY!.trim(),
       },
       body: JSON.stringify({
-        sender: { name: letter.fromName, email: letter.from },
-        to: [{ email: letter.to }],
-        replyTo: { email: letter.replyTo },
-        subject: letter.subject,
-        textContent: letter.text,
+        message: {
+          recipients: [{ email: letter.to }],
+          from_email: letter.from,
+          from_name: letter.fromName,
+          reply_to: letter.replyTo,
+          subject: letter.subject,
+          body: { plaintext: letter.text },
+          skip_unsubscribe: 1,
+          track_links: 0,
+          track_read: 0,
+        },
       }),
       signal: controller.signal,
     });
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      throw new Error(`Brevo HTTP ${response.status}: ${detail.slice(0, 300)}`);
+      throw new Error(`UniSender Go HTTP ${response.status}: ${detail.slice(0, 400)}`);
     }
   } finally {
     clearTimeout(timeout);
@@ -120,8 +130,8 @@ async function sendViaSmtp(letter: Letter): Promise<void> {
 export async function sendFeedbackEmail(input: FeedbackInput): Promise<void> {
   const letter = buildLetter(input);
 
-  if (isBrevoConfigured()) {
-    await sendViaBrevo(letter);
+  if (isUnisenderGoConfigured()) {
+    await sendViaUnisenderGo(letter);
     return;
   }
 
@@ -135,7 +145,7 @@ export async function sendFeedbackEmail(input: FeedbackInput): Promise<void> {
   }
 
   if (!isSmtpConfigured()) {
-    throw new Error("Email-транспорт не настроен (нет ни BREVO_API_KEY, ни SMTP_*)");
+    throw new Error("Email-транспорт не настроен (нет ни UNISENDER_GO_API_KEY, ни SMTP_*)");
   }
 
   await sendViaSmtp(letter);
