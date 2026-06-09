@@ -84,15 +84,14 @@ BACKUP="$ENV_FILE.bak.$(date +%Y%m%d_%H%M%S)"
 cp "$ENV_FILE" "$BACKUP"
 echo "[ok] Backed up $ENV_FILE → $BACKUP"
 
-# helper: set or insert KEY=value
+# helper: set or insert KEY=value (uses | as sed separator; escapes &, |, \)
 set_env() {
   local key="$1"
   local value="$2"
-  # value may contain |, so use a different separator (^) for sed
   local escaped_value
-  escaped_value=$(printf '%s' "$value" | sed 's/[\/&^]/\\&/g')
+  escaped_value=$(printf '%s' "$value" | sed 's/[&|\\]/\\&/g')
   if grep -qE "^${key}=" "$ENV_FILE"; then
-    sed -i "s^^${key}=.*^${key}=${escaped_value}^" "$ENV_FILE"
+    sed -i "s|^${key}=.*|${key}=${escaped_value}|" "$ENV_FILE"
   else
     printf '\n%s=%s\n' "$key" "$value" >>"$ENV_FILE"
   fi
@@ -105,7 +104,24 @@ if [[ "$NEED_NEW_SECRET" == "1" ]]; then
 fi
 
 chmod 600 "$ENV_FILE"
-echo "[ok] .env updated."
+echo "[ok] .env patched."
+
+# Verify the patch actually took effect — guards against silent sed failures.
+ACTUAL_EMAIL=$(grep -E '^ADMIN_EMAIL=' "$ENV_FILE" | head -1 | sed 's/^ADMIN_EMAIL=//')
+ACTUAL_HASH=$(grep -E '^ADMIN_PASSWORD_HASH=' "$ENV_FILE" | head -1 | sed 's/^ADMIN_PASSWORD_HASH=//')
+if [[ "$ACTUAL_EMAIL" != "$ADMIN_EMAIL_IN" ]]; then
+  echo "[!] ADMIN_EMAIL in .env is '$ACTUAL_EMAIL', expected '$ADMIN_EMAIL_IN'." >&2
+  echo "    Restoring backup: $BACKUP" >&2
+  cp "$BACKUP" "$ENV_FILE"
+  exit 1
+fi
+if [[ "$ACTUAL_HASH" != "$HASH" ]]; then
+  echo "[!] ADMIN_PASSWORD_HASH in .env did not update (len ${#ACTUAL_HASH}, expected ${#HASH})." >&2
+  echo "    Restoring backup: $BACKUP" >&2
+  cp "$BACKUP" "$ENV_FILE"
+  exit 1
+fi
+echo "[ok] .env values verified."
 
 # ----- Restart app container -----
 echo "[*] Recreating app container so it picks up the new env..."
