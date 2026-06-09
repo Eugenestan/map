@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { MapPin, Newspaper } from "lucide-react";
 import { FeedbackHeaderButton } from "@/components/features/feedback/feedback-widget";
 
 function TelegramIcon({ className }: { className?: string }) {
@@ -64,11 +64,15 @@ export function Header() {
             <MapPin className="h-6 w-6 shrink-0 text-blue-600" />
             <span className="truncate text-lg font-bold text-zinc-900">Русская карта Нячанга</span>
           </Link>
-          <Link href="/articles" className="hidden text-sm font-medium text-zinc-600 hover:text-blue-600 sm:inline">
+        </div>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Link
+            href="/articles"
+            className="hidden items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 sm:flex"
+          >
+            <Newspaper className="h-4 w-4" />
             Интересные места
           </Link>
-        </div>
-        <div className="flex items-center gap-1">
           <a
             href="https://t.me/RussianMapNhaTrang"
             target="_blank"
