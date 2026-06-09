@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
-import { MessageCircle, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { feedbackSchema, type FeedbackInput } from "@/schemas";
@@ -229,36 +229,17 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Кнопки обратной связи временно скрыты: на проде Timeweb блокирует SMTP,
+// а UniSender Go требует custom backend-домен (NS-делегирование), которое
+// не поддерживает DNS-панель Timeweb. Когда найдём рабочий транспорт —
+// возвращаем оригинальные реализации (см. git history).
+
 /** Плавающая кнопка: только от md (на мобилке — иконка в хедере). */
 export function FeedbackFab() {
-  const { openModal } = useFeedback();
-  return (
-    <button
-      type="button"
-      aria-label="Обратная связь"
-      onClick={openModal}
-      className="fixed z-[1100] hidden h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 md:flex"
-      style={{
-        right: "max(1.5rem, env(safe-area-inset-right, 0px))",
-        bottom: "max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))",
-      }}
-    >
-      <MessageCircle className="h-7 w-7" aria-hidden />
-    </button>
-  );
+  return null;
 }
 
 /** Кнопка в шапке справа (только мобильная вёрстка). */
 export function FeedbackHeaderButton() {
-  const { openModal } = useFeedback();
-  return (
-    <button
-      type="button"
-      aria-label="Обратная связь"
-      onClick={openModal}
-      className="-mr-1 rounded-full p-2 text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 md:hidden"
-    >
-      <MessageCircle className="h-6 w-6" aria-hidden />
-    </button>
-  );
+  return null;
 }
