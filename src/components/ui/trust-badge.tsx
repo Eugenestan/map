@@ -1,5 +1,5 @@
 import { cn } from "@/lib/cn";
-import { ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
+import { ShieldCheck, AlertTriangle } from "lucide-react";
 import type { TrustInfo } from "@/types";
 
 interface TrustBadgeProps {
@@ -7,8 +7,7 @@ interface TrustBadgeProps {
 }
 
 const ICONS = {
-  fresh: ShieldCheck,
-  stale: ShieldAlert,
+  recent: ShieldCheck,
   disputed: AlertTriangle,
 };
 

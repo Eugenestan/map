@@ -133,7 +133,7 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <TrustBadge trust={trust} />
+          {trust && <TrustBadge trust={trust} />}
           {place.admin_recommended && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-amber-200/80">
               ⭐ Рекомендуют

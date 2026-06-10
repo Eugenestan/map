@@ -148,7 +148,7 @@ export interface PlacesFilter {
   offset?: number;
 }
 
-export type TrustLevel = "fresh" | "stale" | "disputed";
+export type TrustLevel = "recent" | "disputed";
 
 export interface TrustInfo {
   level: TrustLevel;
