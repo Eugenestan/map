@@ -249,7 +249,7 @@ export default function HomePage() {
             pickedLocation={pickedLocation}
             flyTo={flyTo}
             highlightRecommended={recommendedLayerOn}
-            locateButtonClassName="bottom-[13.25rem] right-4 w-14 items-center md:bottom-24 md:right-6"
+            locateButtonClassName="bottom-[13.25rem] right-4 w-14 items-center md:bottom-4 md:right-4"
             className="w-full h-full"
           />
 
