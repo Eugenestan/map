@@ -289,6 +289,7 @@ export function AddPlaceForm({
         <label className="block text-sm font-medium text-zinc-700 mb-1">Категория *</label>
         <select
           {...register("category_id", { required: "Выберите категорию" })}
+          value={watch("category_id") || ""}
           className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
         >
           <option value="">Выберите категорию</option>
