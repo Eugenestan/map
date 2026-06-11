@@ -30,6 +30,21 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.leaflet-tooltip.vr-marker-tooltip {
+  background: #ffffff;
+  border: 1px solid rgb(228 228 231);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 12px 16px;
+  color: inherit;
+  white-space: normal;
+  pointer-events: none;
+}
+
+.leaflet-tooltip.vr-marker-tooltip::before {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .leaflet-control-zoom {
     display: none;

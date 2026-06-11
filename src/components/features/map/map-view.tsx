@@ -1,16 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { Circle, MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from "react-leaflet";
+import { Circle, MapContainer, TileLayer, Marker, Popup, Tooltip, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import { LoaderCircle, LocateFixed } from "lucide-react";
 import type { PlaceWithDetails, BBox } from "@/types";
+import { TagBadge } from "@/components/ui/tag-badge";
 import { cn } from "@/lib/cn";
 
 import "leaflet/dist/leaflet.css";
 
 const NHATRANG_CENTER: [number, number] = [12.2451, 109.1943];
 const DEFAULT_ZOOM = 14;
+const TOOLTIP_DESCRIPTION_LIMIT = 20;
+
+function truncate(text: string | null | undefined, limit = TOOLTIP_DESCRIPTION_LIMIT): string | null {
+  if (!text) return null;
+  return text.length > limit ? `${text.slice(0, limit)}...` : text;
+}
 
 type UserLocation = {
   center: [number, number];
@@ -234,29 +241,53 @@ export function MapView({
         {pickMode && onPick && <PickLocation onPick={onPick} />}
         {flyToCenter && <FlyTo center={flyToCenter} />}
 
-        {places.map((place) => (
-          <Marker
-            key={place.id}
-            position={[place.lat, place.lng]}
-            icon={createIcon(place.category_id, place.category.icon, {
-              recommendedGlow: place.admin_recommended,
-            })}
-            eventHandlers={{
-              click: () => onPlaceClick?.(place),
-            }}
-          >
-            <Popup>
-              <div className="min-w-[180px]">
-                <p className="font-semibold text-sm">{place.title}</p>
-                {place.admin_recommended && (
-                  <p className="text-xs text-amber-700 font-medium mt-0.5">⭐ Рекомендуют</p>
-                )}
-                <p className="text-xs text-zinc-500">{place.category.name_ru}</p>
-                {place.address_text && <p className="text-xs text-zinc-500 mt-1">{place.address_text}</p>}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {places.map((place) => {
+          const truncatedDescription = truncate(place.description);
+          return (
+            <Marker
+              key={place.id}
+              position={[place.lat, place.lng]}
+              icon={createIcon(place.category_id, place.category.icon, {
+                recommendedGlow: place.admin_recommended,
+              })}
+              eventHandlers={{
+                click: () => onPlaceClick?.(place),
+              }}
+            >
+              <Tooltip
+                direction="top"
+                offset={[0, -28]}
+                opacity={1}
+                className="vr-marker-tooltip"
+              >
+                <div className="min-w-[180px]">
+                  <p className="font-semibold text-sm text-zinc-900">{place.title}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{place.category.name_ru}</p>
+                  {place.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {place.tags.slice(0, 3).map((pt) => (
+                        <TagBadge key={pt.tag_id} label={pt.tag.name_ru} type={pt.tag.tag_type} />
+                      ))}
+                    </div>
+                  )}
+                  {truncatedDescription && (
+                    <p className="text-xs text-zinc-600 mt-1.5">{truncatedDescription}</p>
+                  )}
+                </div>
+              </Tooltip>
+              <Popup>
+                <div className="min-w-[180px]">
+                  <p className="font-semibold text-sm">{place.title}</p>
+                  {place.admin_recommended && (
+                    <p className="text-xs text-amber-700 font-medium mt-0.5">⭐ Рекомендуют</p>
+                  )}
+                  <p className="text-xs text-zinc-500">{place.category.name_ru}</p>
+                  {place.address_text && <p className="text-xs text-zinc-500 mt-1">{place.address_text}</p>}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
         {userLocation && (
           <>
