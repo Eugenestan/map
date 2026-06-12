@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
 
 const COORDINATE_INPUT_MAX_LENGTH = 40;
+const TITLE_MAX = 55;
 const formatCoordinates = (lat: number, lng: number) => `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
 const parseCoordinate = (value: string) => {
@@ -147,6 +148,7 @@ export function AddPlaceForm({
   }, [initialValues, setValue]);
 
   const descriptionLen = (watch("description") || "").length;
+  const titleLen = (watch("title") || "").length;
   const DESC_MAX = 400;
 
   const openLocationPicker = () => {
@@ -204,6 +206,10 @@ export function AddPlaceForm({
       const title = (data.title ?? "").trim();
       if (title.length < 2) {
         setSubmitError("Название должно быть не менее 2 символов");
+        return;
+      }
+      if (title.length > TITLE_MAX) {
+        setSubmitError(`Название не длиннее ${TITLE_MAX} символов`);
         return;
       }
       const category_id = (data.category_id ?? "").trim();
@@ -276,9 +282,18 @@ export function AddPlaceForm({
   return (
     <form onSubmit={handleSubmit(onValid)} className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">Название *</label>
+        <div className="flex justify-between items-baseline mb-1">
+          <label className="block text-sm font-medium text-zinc-700">Название *</label>
+          <span className={cn("text-xs tabular-nums", titleLen > TITLE_MAX ? "text-red-500" : "text-zinc-400")}>
+            {titleLen}/{TITLE_MAX}
+          </span>
+        </div>
         <input
-          {...register("title", { required: "Введите название" })}
+          {...register("title", {
+            required: "Введите название",
+            maxLength: { value: TITLE_MAX, message: `Максимум ${TITLE_MAX} символов` },
+          })}
+          maxLength={TITLE_MAX}
           className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
           placeholder="Например: Клиника доктора Иванова"
         />

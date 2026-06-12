@@ -9,7 +9,7 @@ function zGeoCoord(min: number, max: number, message: string) {
 }
 
 export const addPlaceSchema = z.object({
-  title: z.string().min(2, "Название должно быть не менее 2 символов").max(200, "Слишком длинное название"),
+  title: z.string().min(2, "Название должно быть не менее 2 символов").max(55, "Название не длиннее 55 символов"),
   category_id: z.string().min(1, "Выберите категорию"),
   lat: zGeoCoord(-90, 90, "Укажите точку на карте"),
   lng: zGeoCoord(-180, 180, "Укажите точку на карте"),

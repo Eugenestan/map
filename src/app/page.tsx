@@ -344,7 +344,7 @@ export default function HomePage() {
       </BottomSheet>
 
       {/* Place detail modal */}
-      <Modal isOpen={activeModal === "place-detail" && !!selectedPlace} onClose={closeModal} title={selectedPlace?.title} size="lg">
+      <Modal isOpen={activeModal === "place-detail" && !!selectedPlace} onClose={closeModal} size="lg">
         {selectedPlace && (
           <PlaceCardFull
             place={selectedPlace}
