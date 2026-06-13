@@ -127,6 +127,22 @@ cd /opt/nhatrang-map
 | `DEPLOY_SSH_KEY`  | **Весь** текст приватного ключа `gha_deploy` (включая строки `BEGIN` / `END`) |
 | `DEPLOY_PATH`     | Абсолютный путь к клону на сервере, например `/opt/nhatrang-map` |
 
+### Переменные `.env` для S3 (фото статей)
+
+Эти ключи **не** в GitHub Secrets, а в файле **`.env`** рядом с `compose.yaml` на самом VPS — их читает `app`-сервис при старте. Без них загрузка новых фото через админку вернёт ошибку 500, а старые base64-фото (если ещё не мигрированы) продолжат отдаваться из БД.
+
+```bash
+S3_ENDPOINT=https://s3.twcstorage.ru
+S3_REGION=ru-1
+S3_BUCKET=vietradar-media
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_PUBLIC_BASE_URL=https://s3.twcstorage.ru/vietradar-media
+S3_FORCE_PATH_STYLE=true
+```
+
+После правки `.env` на сервере достаточно `docker compose up -d` — образ перезапустится с новыми переменными, пересборка не нужна.
+
 Если в логах Deploy ошибка про **host key** / fingerprint: на ПК выполните `ssh-keyscan -p 22 ВАШ_IP 2>/dev/null | ssh-keygen -lf -`, создайте секрет `DEPLOY_HOST_FINGERPRINT` со значением `SHA256:...` и в `.github/workflows/deploy.yml` в блок `with:` шага `appleboy/ssh-action` добавьте строку `fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}`.
 
 Сохраните каждый секрет отдельно. В **`DEPLOY_SSH_KEY`** не должно быть лишних пробелов в начале/конце и **обязательно полный блок** от `-----BEGIN` до `-----END`.

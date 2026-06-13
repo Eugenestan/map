@@ -38,6 +38,15 @@ cp .env.example .env.local
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`
 
+Для загрузки фото статей в объектное хранилище (S3-совместимое: Timeweb Cloud Storage, Cloudflare R2, Backblaze B2, Yandex Object Storage и т.п.):
+
+- `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`
+- `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`
+- `S3_PUBLIC_BASE_URL` — базовый публичный URL объектов
+- `S3_FORCE_PATH_STYLE=true` для Timeweb/Selectel/Yandex, `false` для AWS S3
+
+Если S3 не настроен, новые фото в админке загрузить нельзя, но существующие base64-фото и обычные http(s)-URL продолжают отдаваться как раньше.
+
 Хеш админского пароля можно сгенерировать так:
 
 ```bash
@@ -86,6 +95,8 @@ npm run dev
 - `npm run db:migrate` — применить SQL-миграции Postgres
 - `npm run db:seed` — загрузить справочники категорий и тегов
 - `npm run db:seed:demo` — загрузить справочники и demo-данные
+- `npm run articles:migrate-photos -- --dry-run` — посчитать, что переедет из base64 в S3
+- `npm run articles:migrate-photos` — реальная миграция фото статей в S3 (делает бэкап в `data/`)
 - `npm run dev` — локальный dev через webpack в более щадящем режиме
 - `npm run dev:turbo` — dev через Turbopack
 - `npm run lint` — ESLint

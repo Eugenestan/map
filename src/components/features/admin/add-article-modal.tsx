@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Modal } from "@/components/ui/modal";
 import { ArticleTextEditor } from "@/components/features/admin/article-text-editor";
+import { MAX_ARTICLE_PHOTOS, MAX_PHOTO_FILE_BYTES, uploadArticlePhoto } from "@/lib/upload-article-photo";
 import type { PlaceWithDetails, Tag } from "@/types";
 
 const MapView = dynamic(
@@ -20,14 +21,7 @@ interface AddArticleModalProps {
   onUnauthorized: () => void;
 }
 
-async function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
-    reader.readAsDataURL(file);
-  });
-}
+const MAX_FILE_MB = Math.round(MAX_PHOTO_FILE_BYTES / (1024 * 1024));
 
 export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnauthorized }: AddArticleModalProps) {
   const [title, setTitle] = useState("");
@@ -39,17 +33,42 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   const selectedPlace = useMemo(
     () => places.find((place) => place.id === placeId) ?? null,
     [placeId, places],
   );
 
-  const handlePhotosChange = async (files: FileList | null) => {
-    if (!files) return;
-    const list = Array.from(files).slice(0, 5);
-    const encoded = await Promise.all(list.map(fileToDataUrl));
-    setPhotoUrls(encoded);
+  const handlePhotosChange = async (files: FileList | null, inputElement?: HTMLInputElement | null) => {
+    if (!files || files.length === 0) return;
+    const remainingSlots = Math.max(0, MAX_ARTICLE_PHOTOS - photoUrls.length);
+    if (remainingSlots === 0) {
+      setError(`Можно загрузить не более ${MAX_ARTICLE_PHOTOS} фото`);
+      if (inputElement) inputElement.value = "";
+      return;
+    }
+    const list = Array.from(files).slice(0, remainingSlots);
+
+    setError("");
+    setUploading(true);
+    setUploadProgress({ done: 0, total: list.length });
+    const uploaded: string[] = [];
+    try {
+      for (let index = 0; index < list.length; index += 1) {
+        const url = await uploadArticlePhoto(list[index]);
+        uploaded.push(url);
+        setUploadProgress({ done: index + 1, total: list.length });
+      }
+      setPhotoUrls((prev) => [...prev, ...uploaded]);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото");
+    } finally {
+      setUploading(false);
+      setUploadProgress(null);
+      if (inputElement) inputElement.value = "";
+    }
   };
 
   const toggleTag = (tagId: string) => {
@@ -65,6 +84,8 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
     setPlaceId("");
     setError("");
     setCreatedUrl(null);
+    setUploading(false);
+    setUploadProgress(null);
   };
 
   return (
@@ -161,17 +182,27 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700">Фото (до 5)</label>
+          <label className="mb-1 block text-sm font-medium text-zinc-700">
+            Фото (до {MAX_ARTICLE_PHOTOS}, максимум {MAX_FILE_MB} МБ на файл)
+          </label>
           <input
             type="file"
             accept="image/*"
             multiple
-            onChange={(event) => void handlePhotosChange(event.target.files)}
-            className="w-full text-sm text-zinc-600"
+            disabled={uploading || photoUrls.length >= MAX_ARTICLE_PHOTOS}
+            onChange={(event) => void handlePhotosChange(event.target.files, event.target)}
+            className="w-full text-sm text-zinc-600 disabled:opacity-50"
           />
+          {uploading && uploadProgress && (
+            <p className="mt-1 text-xs text-blue-600">
+              Загрузка {uploadProgress.done}/{uploadProgress.total}...
+            </p>
+          )}
           {photoUrls.length > 0 && (
             <div className="mt-2 space-y-2">
-              <p className="text-xs text-zinc-500">Загружено: {photoUrls.length}</p>
+              <p className="text-xs text-zinc-500">
+                Загружено: {photoUrls.length}/{MAX_ARTICLE_PHOTOS}
+              </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {photoUrls.map((url, index) => (
                   <div key={`${url}-${index}`} className="relative overflow-hidden rounded-lg border border-zinc-200">
@@ -250,10 +281,10 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
         <div className="flex gap-2">
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || uploading}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {saving ? "Сохранение..." : "Создать место"}
+            {saving ? "Сохранение..." : uploading ? "Загрузка фото..." : "Создать место"}
           </button>
           <button
             type="button"

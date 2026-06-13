@@ -176,10 +176,8 @@ export const createArticleSchema = z.object({
   description: z.string().min(10, "Описание должно быть не менее 10 символов").max(5000),
   tag_ids: z.array(z.string()).max(10, "Максимум 10 тегов"),
   photo_urls: z
-    .array(
-      z.string().max(6000000, "Фото слишком большое. Выберите изображение меньшего размера."),
-    )
-    .max(5, "Максимум 5 фото"),
+    .array(z.string().max(2048, "Слишком длинная ссылка на фото"))
+    .max(10, "Максимум 10 фото"),
   lat: zGeoCoord(-90, 90, "Укажите место на карте"),
   lng: zGeoCoord(-180, 180, "Укажите место на карте"),
   place_id: z.string().optional(),

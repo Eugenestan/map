@@ -9,7 +9,19 @@ import {
   updateDevArticle,
   updateDevPlace,
 } from "@/lib/dev-store";
+import { deleteObjectsByUrls, isS3Configured } from "@/lib/s3";
 import type { Article } from "@/types";
+
+async function safeDeleteRemovedPhotos(previous: string[], next: string[]): Promise<void> {
+  if (!isS3Configured()) return;
+  const removed = previous.filter((url) => !next.includes(url));
+  if (removed.length === 0) return;
+  try {
+    await deleteObjectsByUrls(removed);
+  } catch (error) {
+    console.error("articles: failed to delete removed photos from S3", error);
+  }
+}
 
 export interface ArticleFilters {
   search?: string;
@@ -445,6 +457,7 @@ export async function updateArticle(
         updated_at: now,
       }));
     }
+    await safeDeleteRemovedPhotos(existing.photo_urls, data.photo_urls);
     return;
   }
 
@@ -487,6 +500,8 @@ export async function updateArticle(
       );
     }
   });
+
+  await safeDeleteRemovedPhotos(existing.photo_urls, data.photo_urls);
 }
 
 export async function deleteArticle(id: string): Promise<void> {
@@ -508,6 +523,7 @@ export async function deleteArticle(id: string): Promise<void> {
         }));
       }
     }
+    await safeDeleteRemovedPhotos(existing.photo_urls, []);
     return;
   }
 
@@ -525,4 +541,6 @@ export async function deleteArticle(id: string): Promise<void> {
     }
     await sql.unsafe("DELETE FROM articles WHERE id = $1", [id]);
   });
+
+  await safeDeleteRemovedPhotos(existing.photo_urls, []);
 }

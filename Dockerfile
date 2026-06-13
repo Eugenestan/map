@@ -3,7 +3,10 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# Native-биндинги sharp ставим явно под Linux x64 glibc — чтобы образ собирался одинаково
+# вне зависимости от хост-ОС разработчика и не падал в рантайме.
+RUN npm ci \
+ && npm install --cpu=x64 --os=linux --libc=glibc sharp --no-save
 
 FROM deps AS builder
 COPY . .
