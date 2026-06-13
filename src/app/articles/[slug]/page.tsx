@@ -9,7 +9,8 @@ import { getReviewsByPlace } from "@/services/reviews";
 import { getTags } from "@/services/tags";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { FormattedText, stripArticleFormatting } from "@/components/ui/formatted-text";
-import { getPlacePath } from "@/lib/place-url";
+import { ArticlePhotoGallery } from "@/components/features/articles/article-photo-gallery";
+import { getPlaceMapPath } from "@/lib/place-url";
 import { SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/seo";
 
 interface ArticlePageProps {
@@ -106,7 +107,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             {place && (
               <>
                 <span>•</span>
-                <Link href={getPlacePath(place)} className="font-medium text-blue-600 hover:text-blue-700">
+                <Link href={getPlaceMapPath(place)} className="font-medium text-blue-600 hover:text-blue-700">
                   {place.title}
                 </Link>
               </>
@@ -120,17 +121,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           <FormattedText text={article.description} className="mt-4 whitespace-pre-line text-zinc-700" />
 
           {article.photo_urls.length > 0 && (
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {article.photo_urls.map((url, index) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={`${url}-${index}`}
-                  src={url}
-                  alt={`${article.title} фото ${index + 1}`}
-                  className="h-48 w-full rounded-xl border border-zinc-200 object-cover"
-                />
-              ))}
-            </div>
+            <ArticlePhotoGallery photos={article.photo_urls} title={article.title} />
           )}
 
           <div className="mt-6 flex items-center justify-between border-t border-zinc-100 pt-4 text-sm text-zinc-500">

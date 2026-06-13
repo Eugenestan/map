@@ -64,3 +64,12 @@ export function getPlacePublicSlug(place: Pick<Place, "id" | "slug" | "title">):
 export function getPlacePath(place: Pick<Place, "id" | "slug" | "title">): string {
   return `/place/${encodeURIComponent(getPlacePublicSlug(place))}`;
 }
+
+/**
+ * Путь на главную карту с автоматическим открытием карточки выбранного места.
+ * Используется, когда мы хотим показать место в контексте карты (а не как
+ * отдельную SEO-страницу `/place/[slug]`).
+ */
+export function getPlaceMapPath(place: Pick<Place, "id" | "slug" | "title">): string {
+  return `/?place=${encodeURIComponent(getPlacePublicSlug(place))}`;
+}

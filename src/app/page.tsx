@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { PlaceWithDetails, Category, Tag } from "@/types";
 import { Header } from "@/components/ui/header";
 import { SearchBar } from "@/components/ui/search-bar";
@@ -21,6 +21,7 @@ import type { AddPlaceInput } from "@/schemas";
 import { CATEGORIES } from "@/data/seed";
 import { Plus, SlidersHorizontal, List, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { getPlacePublicSlug } from "@/lib/place-url";
 
 const MapView = dynamic(
   () => import("@/components/features/map/map-view").then((m) => m.MapView),
@@ -51,6 +52,8 @@ export default function HomePage() {
   const [placeFormDraft, setPlaceFormDraft] = useState<Partial<AddPlaceInput>>({});
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
   const [mobileListOpen, setMobileListOpen] = useState(false);
+  const pendingPlaceQueryRef = useRef<string | null>(null);
+  const queryHandledRef = useRef(false);
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -83,11 +86,40 @@ export default function HomePage() {
     fetchPlaces();
   }, [fetchPlaces]);
 
-  const handlePlaceClick = (place: PlaceWithDetails) => {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const placeQuery = params.get("place");
+    if (placeQuery) {
+      pendingPlaceQueryRef.current = placeQuery;
+    }
+  }, []);
+
+  const handlePlaceClick = useCallback((place: PlaceWithDetails) => {
     setSelectedPlace(place);
     setActiveModal("place-detail");
     setFlyTo([place.lat, place.lng]);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (queryHandledRef.current) return;
+    const pending = pendingPlaceQueryRef.current;
+    if (!pending) return;
+    if (loading || places.length === 0) return;
+
+    const match = places.find(
+      (place) =>
+        place.id === pending ||
+        place.slug === pending ||
+        getPlacePublicSlug(place) === pending,
+    );
+
+    if (match) {
+      queryHandledRef.current = true;
+      pendingPlaceQueryRef.current = null;
+      handlePlaceClick(match);
+    }
+  }, [places, loading, handlePlaceClick]);
 
   const handleAddPlace = () => {
     setPickedLocation(null);
