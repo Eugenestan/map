@@ -67,7 +67,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const plainDescription = stripArticleFormatting(article.description);
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-[#e8f2e1]">
       <JsonLd
         data={{
           "@context": "https://schema.org",

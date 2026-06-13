@@ -14,6 +14,7 @@ import type { Article } from "@/types";
 export interface ArticleFilters {
   search?: string;
   placeId?: string;
+  categoryId?: string;
   tagIds?: string[];
   limit?: number;
   offset?: number;
@@ -145,17 +146,18 @@ function mapArticle(row: ArticleRow): Article {
 }
 
 function normalizeArticleFilters(filters: ArticleFilters): Required<Pick<ArticleFilters, "tagIds">> &
-  Pick<ArticleFilters, "search" | "placeId" | "limit" | "offset"> {
+  Pick<ArticleFilters, "search" | "placeId" | "categoryId" | "limit" | "offset"> {
   return {
     search: filters.search?.trim() || undefined,
     placeId: filters.placeId?.trim() || undefined,
+    categoryId: filters.categoryId?.trim() || undefined,
     tagIds: [...new Set(filters.tagIds?.map((tagId) => tagId.trim()).filter(Boolean) || [])],
     limit: filters.limit,
     offset: filters.offset,
   };
 }
 
-function applyDevArticleFilters(articles: Article[], filters: ArticleFilters): Article[] {
+function filterDevArticles(articles: Article[], filters: ArticleFilters): Article[] {
   const normalized = normalizeArticleFilters(filters);
   let items = [...articles];
 
@@ -170,12 +172,24 @@ function applyDevArticleFilters(articles: Article[], filters: ArticleFilters): A
     items = items.filter((article) => article.place_id === normalized.placeId);
   }
 
+  if (normalized.categoryId) {
+    const placeCategoryMap = new Map(listDevPlaces().map((place) => [place.id, place.category_id]));
+    items = items.filter(
+      (article) => article.place_id && placeCategoryMap.get(article.place_id) === normalized.categoryId,
+    );
+  }
+
   if (normalized.tagIds.length > 0) {
     items = items.filter((article) => normalized.tagIds.every((tagId) => article.tag_ids.includes(tagId)));
   }
 
   items.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return items;
+}
 
+function applyDevArticleFilters(articles: Article[], filters: ArticleFilters): Article[] {
+  const normalized = normalizeArticleFilters(filters);
+  const items = filterDevArticles(articles, normalized);
   const offset = normalized.offset || 0;
   const limit = normalized.limit || 100;
   return items.slice(offset, offset + limit);
@@ -270,15 +284,14 @@ export async function getArticleById(id: string): Promise<Article | null> {
   return mapArticle(rows[0]);
 }
 
-export async function getArticles(filters: ArticleFilters = {}): Promise<Article[]> {
+function buildArticleWhereClause(filters: ArticleFilters): {
+  where: string;
+  params: (string | string[])[];
+  nextIndex: number;
+} {
   const normalized = normalizeArticleFilters(filters);
-
-  if (!isDatabaseConfigured()) {
-    return applyDevArticleFilters(listDevArticles(), normalized);
-  }
-
   const conditions: string[] = [];
-  const params: (string | number | string[])[] = [];
+  const params: (string | string[])[] = [];
   let parameterIndex = 1;
 
   if (normalized.search) {
@@ -293,6 +306,14 @@ export async function getArticles(filters: ArticleFilters = {}): Promise<Article
     parameterIndex += 1;
   }
 
+  if (normalized.categoryId) {
+    conditions.push(
+      `place_id IN (SELECT id FROM places WHERE category_id = $${parameterIndex})`,
+    );
+    params.push(normalized.categoryId);
+    parameterIndex += 1;
+  }
+
   if (normalized.tagIds.length > 0) {
     conditions.push(`tag_ids @> $${parameterIndex}::text[]`);
     params.push(normalized.tagIds);
@@ -300,22 +321,49 @@ export async function getArticles(filters: ArticleFilters = {}): Promise<Article
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  return { where, params, nextIndex: parameterIndex };
+}
+
+export async function getArticles(filters: ArticleFilters = {}): Promise<Article[]> {
+  const normalized = normalizeArticleFilters(filters);
+
+  if (!isDatabaseConfigured()) {
+    return applyDevArticleFilters(listDevArticles(), normalized);
+  }
+
+  const { where, params, nextIndex } = buildArticleWhereClause(normalized);
   const limit = normalized.limit || 100;
   const offset = normalized.offset || 0;
 
-  params.push(limit, offset);
+  const finalParams: (string | number | string[])[] = [...params, limit, offset];
   const rows = await execute<ArticleRow>(
     `
     SELECT *
     FROM articles
     ${where}
     ORDER BY created_at DESC
-    LIMIT $${parameterIndex} OFFSET $${parameterIndex + 1}
+    LIMIT $${nextIndex} OFFSET $${nextIndex + 1}
   `,
-    params,
+    finalParams,
   );
 
   return rows.map(mapArticle);
+}
+
+export async function countArticles(filters: ArticleFilters = {}): Promise<number> {
+  const normalized = normalizeArticleFilters(filters);
+
+  if (!isDatabaseConfigured()) {
+    return filterDevArticles(listDevArticles(), normalized).length;
+  }
+
+  const { where, params } = buildArticleWhereClause(normalized);
+  const rows = await execute<{ total: string | number }>(
+    `SELECT COUNT(*)::bigint AS total FROM articles ${where}`,
+    params,
+  );
+  if (!rows.length) return 0;
+  return Number(rows[0].total) || 0;
 }
 
 export async function getRelatedArticles(article: Article, limit = 3): Promise<Article[]> {
