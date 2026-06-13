@@ -54,6 +54,7 @@ export default function HomePage() {
   const [mobileListOpen, setMobileListOpen] = useState(false);
   const pendingPlaceQueryRef = useRef<string | null>(null);
   const queryHandledRef = useRef(false);
+  const placesRequestIdRef = useRef(0);
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -63,22 +64,47 @@ export default function HomePage() {
   }, []);
 
   const fetchPlaces = useCallback(async () => {
+    const requestId = ++placesRequestIdRef.current;
     setLoading(true);
-    const params = new URLSearchParams();
-    if (debouncedSearch) params.set("search", debouncedSearch);
-    if (selectedCategory) params.set("category", selectedCategory);
-    if (selectedTags.length > 0) params.set("tags", selectedTags.join(","));
-    if (verifiedOnly) params.set("verifiedOnly", "true");
-    if (hasReviewsOnly) params.set("hasReviewsOnly", "true");
+
+    const baseParams = new URLSearchParams();
+    if (debouncedSearch) baseParams.set("search", debouncedSearch);
+    if (selectedCategory) baseParams.set("category", selectedCategory);
+    if (selectedTags.length > 0) baseParams.set("tags", selectedTags.join(","));
+    if (verifiedOnly) baseParams.set("verifiedOnly", "true");
+    if (hasReviewsOnly) baseParams.set("hasReviewsOnly", "true");
+
+    // Серверный лимит по умолчанию — 50. Подгружаем страницами по PAGE_SIZE,
+    // пока сервер не вернёт меньше страницы. MAX_PAGES — предохранитель от бесконечного цикла.
+    const PAGE_SIZE = 200;
+    const MAX_PAGES = 50;
+    const collected: PlaceWithDetails[] = [];
 
     try {
-      const res = await fetch(`/api/places?${params}`);
-      const data = await res.json();
-      setPlaces(data.data || []);
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const params = new URLSearchParams(baseParams);
+        params.set("limit", String(PAGE_SIZE));
+        params.set("offset", String(page * PAGE_SIZE));
+
+        const res = await fetch(`/api/places?${params}`);
+        if (requestId !== placesRequestIdRef.current) return;
+
+        const data = await res.json();
+        const chunk: PlaceWithDetails[] = Array.isArray(data?.data) ? data.data : [];
+        collected.push(...chunk);
+
+        if (chunk.length < PAGE_SIZE) break;
+      }
+
+      if (requestId !== placesRequestIdRef.current) return;
+      setPlaces(collected);
     } catch {
+      if (requestId !== placesRequestIdRef.current) return;
       setPlaces([]);
     } finally {
-      setLoading(false);
+      if (requestId === placesRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [debouncedSearch, selectedCategory, selectedTags, verifiedOnly, hasReviewsOnly]);
 
