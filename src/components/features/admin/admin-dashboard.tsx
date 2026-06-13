@@ -284,7 +284,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                     {place.address_text && <p className="mt-1 text-sm text-zinc-500">{place.address_text}</p>}
                     {place.description && <p className="mt-2 text-sm text-zinc-600">{place.description}</p>}
                     <p className="mt-2 text-xs text-zinc-400">
-                      Координаты: {place.lat.toFixed(5)}, {place.lng.toFixed(5)}
+                      Координаты: {place.lat.toFixed(7)}, {place.lng.toFixed(7)}
                     </p>
                   </div>
                   <div className="flex flex-shrink-0 gap-2">
@@ -393,7 +393,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
                       ))}
                     </div>
                     <p className="mt-2 text-xs text-zinc-400">
-                      Отзывов: {place.reviews_count} · Координаты: {place.lat.toFixed(5)}, {place.lng.toFixed(5)}
+                      Отзывов: {place.reviews_count} · Координаты: {place.lat.toFixed(7)}, {place.lng.toFixed(7)}
                     </p>
                   </div>
                   <div className="flex flex-shrink-0 gap-2">

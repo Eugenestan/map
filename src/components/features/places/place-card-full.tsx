@@ -58,7 +58,7 @@ interface PlaceCardFullProps {
 }
 
 function formatCoordinate(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(6) : String(value);
+  return Number.isFinite(value) ? value.toFixed(7) : String(value);
 }
 
 function formatReviewDate(review: ReviewWithTags): string {

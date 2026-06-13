@@ -14,7 +14,7 @@ type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
 
 const COORDINATE_INPUT_MAX_LENGTH = 40;
 const TITLE_MAX = 55;
-const formatCoordinates = (lat: number, lng: number) => `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+const formatCoordinates = (lat: number, lng: number) => `${lat.toFixed(7)}, ${lng.toFixed(7)}`;
 
 const parseCoordinate = (value: string) => {
   const parsed = Number(value.trim().replace(",", "."));

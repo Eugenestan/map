@@ -235,7 +235,7 @@ export function AddArticleModal({ isOpen, tags, places, onClose, onSaved, onUnau
           </div>
           {pickedLocation && (
             <p className="mt-1 text-xs text-zinc-500">
-              Выбрано: {pickedLocation[0].toFixed(5)}, {pickedLocation[1].toFixed(5)}
+              Выбрано: {pickedLocation[0].toFixed(7)}, {pickedLocation[1].toFixed(7)}
             </p>
           )}
         </div>
