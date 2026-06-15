@@ -5,12 +5,19 @@ import { useForm } from "react-hook-form";
 import type { AddPlaceInput } from "@/schemas";
 import type { Category, Tag } from "@/types";
 import { TurnstileWidget } from "@/components/ui/turnstile-widget";
-import { MapPin, Check } from "lucide-react";
+import { MapPin, Check, ImagePlus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import {
+  MAX_PLACE_PHOTOS,
+  MAX_PLACE_PHOTO_FILE_BYTES,
+  uploadPlacePhoto,
+} from "@/lib/upload-place-photo";
 import type { ReactNode } from "react";
 
 /** Поля формы без координат — lat/lng обрабатываются отдельным полем. */
-type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng">;
+type AddPlaceFormFields = Omit<AddPlaceInput, "lat" | "lng" | "photo_urls">;
+
+const MAX_PHOTO_FILE_MB = Math.round(MAX_PLACE_PHOTO_FILE_BYTES / (1024 * 1024));
 
 const COORDINATE_INPUT_MAX_LENGTH = 40;
 const TITLE_MAX = 55;
@@ -52,8 +59,8 @@ interface AddPlaceFormProps {
   onPickLocation?: () => void;
   onCoordinatesChange?: (lat: number, lng: number) => void;
   /** Сохранить введённые данные перед выбором точки на карте (родитель подставит их в initialValues). */
-  onBeforePickLocation?: (snapshot: Partial<AddPlaceFormFields>) => void;
-  initialValues?: Partial<AddPlaceFormFields>;
+  onBeforePickLocation?: (snapshot: Partial<AddPlaceFormFields> & { photo_urls?: string[] }) => void;
+  initialValues?: Partial<AddPlaceFormFields> & { photo_urls?: string[] };
   submitLabel?: string;
   successTitle?: string;
   successDescription?: string;
@@ -82,6 +89,10 @@ export function AddPlaceForm({
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>(initialValues?.tags || []);
+  const [photoUrls, setPhotoUrls] = useState<string[]>(initialValues?.photo_urls || []);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoUploadProgress, setPhotoUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [photoError, setPhotoError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -136,6 +147,7 @@ export function AddPlaceForm({
     }
 
     setSelectedTags(initialValues.tags || []);
+    setPhotoUrls(initialValues.photo_urls || []);
     setValue("title", initialValues.title || "");
     setValue("category_id", initialValues.category_id || "");
     setValue("address_text", initialValues.address_text || "");
@@ -152,8 +164,51 @@ export function AddPlaceForm({
   const DESC_MAX = 400;
 
   const openLocationPicker = () => {
-    onBeforePickLocation?.(getValues());
+    onBeforePickLocation?.({ ...getValues(), photo_urls: photoUrls });
     onPickLocation?.();
+  };
+
+  const handlePhotosChange = async (
+    files: FileList | null,
+    inputElement?: HTMLInputElement | null,
+  ) => {
+    if (!files || files.length === 0) return;
+    const remainingSlots = Math.max(0, MAX_PLACE_PHOTOS - photoUrls.length);
+    if (remainingSlots === 0) {
+      setPhotoError(`Можно загрузить не более ${MAX_PLACE_PHOTOS} фото`);
+      if (inputElement) inputElement.value = "";
+      return;
+    }
+
+    const list = Array.from(files).slice(0, remainingSlots);
+    setPhotoError("");
+    setPhotoUploading(true);
+    setPhotoUploadProgress({ done: 0, total: list.length });
+    const uploaded: string[] = [];
+
+    try {
+      for (let index = 0; index < list.length; index += 1) {
+        const file = list[index];
+        if (file.size > MAX_PLACE_PHOTO_FILE_BYTES) {
+          throw new Error(`Файл «${file.name}» больше ${MAX_PHOTO_FILE_MB} МБ`);
+        }
+        const url = await uploadPlacePhoto(file);
+        uploaded.push(url);
+        setPhotoUploadProgress({ done: index + 1, total: list.length });
+      }
+      setPhotoUrls((prev) => [...prev, ...uploaded]);
+    } catch (uploadError) {
+      setPhotoError(uploadError instanceof Error ? uploadError.message : "Не удалось загрузить фото");
+    } finally {
+      setPhotoUploading(false);
+      setPhotoUploadProgress(null);
+      if (inputElement) inputElement.value = "";
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotoUrls((prev) => prev.filter((_, i) => i !== index));
+    setPhotoError("");
   };
 
   const handleCoordinateInputChange = (value: string) => {
@@ -239,6 +294,7 @@ export function AddPlaceForm({
         website: opt(data.website),
         telegram: opt(data.telegram),
         working_hours: opt(data.working_hours),
+        photo_urls: photoUrls.length > 0 ? [...photoUrls] : undefined,
       };
       await onSubmit(payload, { turnstileToken });
       if (showSuccessState) {
@@ -376,6 +432,70 @@ export function AddPlaceForm({
         {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>}
       </div>
 
+      <div>
+        <div className="mb-1 flex items-baseline justify-between">
+          <label className="block text-sm font-medium text-zinc-700">Фотографии</label>
+          <span className="text-xs tabular-nums text-zinc-400">
+            {photoUrls.length}/{MAX_PLACE_PHOTOS}
+          </span>
+        </div>
+        <p className="mb-2 text-xs text-zinc-500">
+          До {MAX_PLACE_PHOTOS} фото, до {MAX_PHOTO_FILE_MB} МБ каждое. Доступна загрузка с компьютера или телефона.
+        </p>
+
+        {photoUrls.length > 0 && (
+          <div className="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {photoUrls.map((url, index) => (
+              <div
+                key={`${url}-${index}`}
+                className="relative aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`Фото ${index + 1}`} className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(index)}
+                  aria-label={`Удалить фото ${index + 1}`}
+                  className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/65 text-white hover:bg-black/80"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <label
+          className={cn(
+            "inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm font-medium transition-colors",
+            photoUploading || photoUrls.length >= MAX_PLACE_PHOTOS
+              ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400"
+              : "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100",
+          )}
+        >
+          <ImagePlus className="h-4 w-4" />
+          {photoUploading
+            ? photoUploadProgress
+              ? `Загрузка ${photoUploadProgress.done}/${photoUploadProgress.total}...`
+              : "Загрузка..."
+            : photoUrls.length >= MAX_PLACE_PHOTOS
+              ? "Лимит достигнут"
+              : photoUrls.length === 0
+                ? "Добавить фото"
+                : "Добавить ещё"}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={photoUploading || photoUrls.length >= MAX_PLACE_PHOTOS}
+            onChange={(event) => void handlePhotosChange(event.target.files, event.target)}
+            className="hidden"
+          />
+        </label>
+
+        {photoError && <p className="mt-1 text-xs text-red-500">{photoError}</p>}
+      </div>
+
       {infoField}
 
       <div>
@@ -463,10 +583,10 @@ export function AddPlaceForm({
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || photoUploading}
         className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {submitting ? "Сохранение..." : submitLabel}
+        {submitting ? "Сохранение..." : photoUploading ? "Загрузка фото..." : submitLabel}
       </button>
       {secondaryAction}
     </form>

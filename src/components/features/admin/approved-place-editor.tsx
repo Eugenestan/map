@@ -119,6 +119,7 @@ export function ApprovedPlaceEditor({
               website: place.website || "",
               telegram: place.telegram || "",
               working_hours: place.working_hours || "",
+              photo_urls: place.photo_urls,
             }}
             submitLabel="Сохранить место"
             showSuccessState={false}

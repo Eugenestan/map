@@ -2,19 +2,40 @@ import { assertDatabaseConfigured, buildInClause, execute, isDatabaseConfigured,
 import { CATEGORIES, MOCK_PLACES, MOCK_REVIEWS, TAGS } from "@/data/seed";
 import { getDevPlaceById, insertDevPlace, listDevPlaces, listDevReviews, updateDevPlace } from "@/lib/dev-store";
 import { slugifyPlaceTitle } from "@/lib/place-url";
+import { deleteObjectsByUrls, isS3Configured } from "@/lib/s3";
 import type { Place, PlaceListItem, PlaceWithDetails, PlacesFilter, PlaceTagAggregate, Category, Tag } from "@/types";
 import { v4 as uuid } from "uuid";
+
+/** Удаляем из S3 только те объекты, которые точно убраны из places.photo_urls. */
+async function safeDeleteRemovedPlacePhotos(previous: string[], next: string[]): Promise<void> {
+  if (!isS3Configured()) return;
+  const removed = previous.filter((url) => !next.includes(url));
+  if (removed.length === 0) return;
+  try {
+    await deleteObjectsByUrls(removed);
+  } catch (error) {
+    console.error("places: failed to delete removed photos from S3", error);
+  }
+}
+
+function normalizePhotoUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+}
 
 function slugify(text: string): string {
   return slugifyPlaceTitle(text);
 }
 
-interface PlaceBaseRow extends Omit<Place, "is_verified" | "last_verified_at" | "created_at" | "updated_at" | "admin_recommended"> {
+interface PlaceBaseRow extends Omit<Place, "is_verified" | "last_verified_at" | "created_at" | "updated_at" | "admin_recommended" | "photo_urls"> {
   created_at: string | Date;
   updated_at: string | Date;
   is_verified: boolean;
   last_verified_at: string | Date | null;
   admin_recommended: boolean;
+  photo_urls: string[] | null;
   cat_id: string;
   cat_slug: string;
   cat_name: string;
@@ -152,6 +173,7 @@ function getMockPlacesCollection(includeAllReviewStatuses = false): PlaceWithDet
       last_verified_at: place.last_verified_at,
       admin_recommended: !!(place as { admin_recommended?: boolean }).admin_recommended,
       place_info: (place as { place_info?: string | null }).place_info ?? null,
+      photo_urls: normalizePhotoUrls((place as { photo_urls?: unknown }).photo_urls),
       source_type: null,
       duplicate_of: null,
       category,
@@ -291,6 +313,7 @@ async function hydratePlaces(rows: PlaceBaseRow[], includeAllReviewStatuses = fa
     last_verified_at: normalizeTimestamp(row.last_verified_at),
     admin_recommended: normalizeBoolean(row.admin_recommended),
     place_info: row.place_info ?? null,
+    photo_urls: normalizePhotoUrls(row.photo_urls),
     source_type: row.source_type,
     duplicate_of: row.duplicate_of,
     category: mapPlaceCategory(row),
@@ -441,9 +464,11 @@ export async function createPlace(data: {
   website?: string;
   telegram?: string;
   working_hours?: string;
+  photo_urls?: string[];
 }): Promise<{ id: string }> {
   const id = uuid();
   const slug = slugify(data.title) || id;
+  const photoUrls = normalizePhotoUrls(data.photo_urls);
 
   if (!isDatabaseConfigured()) {
     const now = new Date().toISOString();
@@ -465,6 +490,7 @@ export async function createPlace(data: {
       last_verified_at: null,
       admin_recommended: false,
       place_info: null,
+      photo_urls: [...photoUrls],
       tags: [...(data.tags || [])],
       created_at: now,
       updated_at: now,
@@ -477,8 +503,8 @@ export async function createPlace(data: {
 
   await withTransaction(async (sql) => {
     await sql.unsafe(`
-      INSERT INTO places (id, title, slug, category_id, status, description, address_text, lat, lng, phone, website, telegram, working_hours, is_verified)
-      VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, FALSE)
+      INSERT INTO places (id, title, slug, category_id, status, description, address_text, lat, lng, phone, website, telegram, working_hours, is_verified, photo_urls)
+      VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, FALSE, $13::text[])
     `, [
       id,
       data.title,
@@ -492,6 +518,7 @@ export async function createPlace(data: {
       data.website || null,
       data.telegram || null,
       data.working_hours || null,
+      photoUrls,
     ]);
 
     if (data.tags?.length) {
@@ -557,8 +584,12 @@ export async function updatePlace(id: string, data: {
   is_verified?: boolean;
   admin_recommended?: boolean;
   place_info?: string;
+  photo_urls?: string[];
 }): Promise<void> {
   const slug = slugify(data.title) || id;
+  const nextPhotoUrls = normalizePhotoUrls(data.photo_urls);
+  const previousPlace = await getPlaceById(id);
+  const previousPhotoUrls = previousPlace?.photo_urls ?? [];
 
   if (!isDatabaseConfigured()) {
     const updated = updateDevPlace(id, (place) => ({
@@ -579,6 +610,7 @@ export async function updatePlace(id: string, data: {
       last_verified_at: data.is_verified ? new Date().toISOString() : null,
       admin_recommended: data.admin_recommended !== undefined ? !!data.admin_recommended : place.admin_recommended,
       place_info: data.place_info?.trim() || null,
+      photo_urls: [...nextPhotoUrls],
       tags: [...(data.tags || [])],
       updated_at: new Date().toISOString(),
     }));
@@ -586,6 +618,7 @@ export async function updatePlace(id: string, data: {
     if (!updated) {
       throw new Error("Место не найдено");
     }
+    await safeDeleteRemovedPlacePhotos(previousPhotoUrls, nextPhotoUrls);
     return;
   }
 
@@ -596,8 +629,8 @@ export async function updatePlace(id: string, data: {
       UPDATE places
       SET title = $1, slug = $2, category_id = $3, status = $4, description = $5, address_text = $6, lat = $7, lng = $8,
           phone = $9, website = $10, telegram = $11, working_hours = $12, is_verified = $13,
-          admin_recommended = COALESCE($14, admin_recommended), place_info = $15, updated_at = NOW()
-      WHERE id = $16
+          admin_recommended = COALESCE($14, admin_recommended), place_info = $15, photo_urls = $16::text[], updated_at = NOW()
+      WHERE id = $17
     `, [
       data.title,
       slug,
@@ -614,6 +647,7 @@ export async function updatePlace(id: string, data: {
       !!data.is_verified,
       data.admin_recommended !== undefined ? !!data.admin_recommended : null,
       data.place_info?.trim() || null,
+      nextPhotoUrls,
       id,
     ]);
 
@@ -628,6 +662,8 @@ export async function updatePlace(id: string, data: {
       }
     }
   });
+
+  await safeDeleteRemovedPlacePhotos(previousPhotoUrls, nextPhotoUrls);
 }
 
 export async function getPendingPlaces(): Promise<PlaceWithDetails[]> {

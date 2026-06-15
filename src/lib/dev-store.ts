@@ -19,6 +19,7 @@ type DevPlaceRecord = {
   last_verified_at: string | null;
   admin_recommended: boolean;
   place_info: string | null;
+  photo_urls: string[];
   tags: string[];
   created_at: string;
   updated_at: string;
@@ -72,6 +73,7 @@ function createInitialStore() {
     admin_recommended: !!(place as { admin_recommended?: boolean }).admin_recommended,
     tags: [...place.tags],
     place_info: null,
+    photo_urls: [],
     created_at: place.last_verified_at ?? "2026-01-01T00:00:00.000Z",
     updated_at: place.last_verified_at ?? "2026-01-01T00:00:00.000Z",
   }));

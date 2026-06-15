@@ -41,6 +41,7 @@ export function PendingPlaceModerationModal({
           website: place.website || "",
           telegram: place.telegram || "",
           working_hours: place.working_hours || "",
+          photo_urls: place.photo_urls,
         }}
         submitLabel="Одобрить"
         showSuccessState={false}

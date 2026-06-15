@@ -27,6 +27,10 @@ export const addPlaceSchema = z.object({
     }),
   working_hours: z.string().max(200).optional(),
   author_name: z.string().max(50).optional(),
+  photo_urls: z
+    .array(z.string().max(2048, "Слишком длинная ссылка на фото"))
+    .max(5, "Максимум 5 фото")
+    .optional(),
 });
 
 export type AddPlaceInput = z.infer<typeof addPlaceSchema>;

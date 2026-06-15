@@ -50,6 +50,8 @@ export interface Place {
   admin_recommended: boolean;
   /** Дополнительная информация от модератора, например ссылки на статьи. */
   place_info: string | null;
+  /** Публичные URL фотографий места в S3-хранилище (до 5 шт.). */
+  photo_urls: string[];
   source_type: string | null;
   duplicate_of: string | null;
 }

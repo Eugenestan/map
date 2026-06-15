@@ -6,6 +6,7 @@ import type { PlaceWithDetails, ReviewWithTags } from "@/types";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PlacePhotoGallery } from "@/components/features/places/place-photo-gallery";
 import { getPlacePath } from "@/lib/place-url";
 import { computePlaceTrust } from "@/lib/trust";
 import {
@@ -401,6 +402,13 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
               <TagBadge key={placeTag.tag_id} label={placeTag.tag.name_ru} type={placeTag.tag.tag_type} size="md" />
             ))}
           </div>
+        </section>
+      )}
+
+      {place.photo_urls.length > 0 && (
+        <section className="space-y-2">
+          <h3 className="text-sm font-bold text-[#071a49]">Фотографии</h3>
+          <PlacePhotoGallery photos={place.photo_urls} title={place.title} />
         </section>
       )}
 

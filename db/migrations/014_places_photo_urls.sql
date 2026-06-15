@@ -1,0 +1,2 @@
+ALTER TABLE places
+  ADD COLUMN IF NOT EXISTS photo_urls TEXT[] NOT NULL DEFAULT '{}';
