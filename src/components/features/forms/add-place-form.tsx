@@ -440,7 +440,7 @@ export function AddPlaceForm({
           </span>
         </div>
         <p className="mb-2 text-xs text-zinc-500">
-          До {MAX_PLACE_PHOTOS} фото, до {MAX_PHOTO_FILE_MB} МБ каждое. Доступна загрузка с компьютера или телефона.
+          Вы можете загрузить до {MAX_PLACE_PHOTOS} фото объемом до {MAX_PHOTO_FILE_MB}mb
         </p>
 
         {photoUrls.length > 0 && (
