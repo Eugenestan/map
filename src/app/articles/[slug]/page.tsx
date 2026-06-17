@@ -118,7 +118,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               {articleTags.map((tag) => tag && <TagBadge key={tag.id} label={tag.name_ru} type={tag.tag_type} />)}
             </div>
           )}
-          <FormattedText text={article.description} className="mt-4 whitespace-pre-line text-zinc-700" />
+          <FormattedText text={article.description} className="mt-4 text-zinc-700" />
 
           {article.photo_urls.length > 0 && (
             <ArticlePhotoGallery photos={article.photo_urls} title={article.title} />

@@ -1,4 +1,12 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
+import { cn } from "@/lib/cn";
+
+function isEmojiBulletLine(line: string) {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  const firstChar = Array.from(trimmed)[0];
+  return firstChar ? /\p{Extended_Pictographic}/u.test(firstChar) : false;
+}
 
 function renderInlineText(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
@@ -56,6 +64,15 @@ export function stripArticleFormatting(text: string) {
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1")
     .replace(/\*\*([\s\S]+?)\*\*/g, "$1")
     .replace(/\*([^*\n]+?)\*/g, "$1");
+}
+
+function renderParagraphLines(paragraphLines: string[], keyPrefix: string) {
+  return paragraphLines.map((paragraphLine, lineIndex) => (
+    <Fragment key={`${keyPrefix}-line-${lineIndex}`}>
+      {lineIndex > 0 && <br />}
+      {renderInlineText(paragraphLine.trim(), `${keyPrefix}-${lineIndex}`)}
+    </Fragment>
+  ));
 }
 
 export function FormattedText({ text, className }: { text: string; className?: string }) {
@@ -130,6 +147,22 @@ export function FormattedText({ text, className }: { text: string; className?: s
       continue;
     }
 
+    if (isEmojiBulletLine(trimmed)) {
+      const items: string[] = [];
+      while (index < lines.length && isEmojiBulletLine(lines[index])) {
+        items.push(lines[index].trim());
+        index += 1;
+      }
+      blocks.push(
+        <ul key={`emoji-list-${index}`} className="list-none space-y-1">
+          {items.map((item, itemIndex) => (
+            <li key={`emoji-list-${index}-${itemIndex}`}>{renderInlineText(item, `emoji-list-${index}-${itemIndex}`)}</li>
+          ))}
+        </ul>,
+      );
+      continue;
+    }
+
     const paragraphLines: string[] = [];
     while (index < lines.length && lines[index].trim()) {
       const nextTrimmed = lines[index].trim();
@@ -141,11 +174,11 @@ export function FormattedText({ text, className }: { text: string; className?: s
     }
 
     blocks.push(
-      <p key={`paragraph-${index}`} className="whitespace-pre-line">
-        {renderInlineText(paragraphLines.join("\n"), `paragraph-${index}`)}
+      <p key={`paragraph-${index}`} className="leading-relaxed">
+        {renderParagraphLines(paragraphLines, `paragraph-${index}`)}
       </p>,
     );
   }
 
-  return <div className={className}>{blocks.length > 0 ? blocks : text}</div>;
+  return <div className={cn("space-y-3", className)}>{blocks.length > 0 ? blocks : text}</div>;
 }
