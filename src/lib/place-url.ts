@@ -70,6 +70,13 @@ export function getPlacePath(place: Pick<Place, "id" | "slug" | "title">): strin
  * Используется, когда мы хотим показать место в контексте карты (а не как
  * отдельную SEO-страницу `/place/[slug]`).
  */
-export function getPlaceMapPath(place: Pick<Place, "id" | "slug" | "title">): string {
-  return `/?place=${encodeURIComponent(getPlacePublicSlug(place))}`;
+export type PlaceMapAction = "review";
+
+export function getPlaceMapPath(
+  place: Pick<Place, "id" | "slug" | "title">,
+  options?: { action?: PlaceMapAction },
+): string {
+  const params = new URLSearchParams({ place: getPlacePublicSlug(place) });
+  if (options?.action) params.set("action", options.action);
+  return `/?${params.toString()}`;
 }

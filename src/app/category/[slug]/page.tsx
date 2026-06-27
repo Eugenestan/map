@@ -3,11 +3,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/ui/header";
 import { JsonLd } from "@/components/ui/json-ld";
-import { TagBadge } from "@/components/ui/tag-badge";
+import { CategoryPlaceCard } from "@/components/features/places/category-place-card";
 import { CATEGORIES } from "@/data/seed";
 import { getCategories } from "@/services/categories";
 import { getPlaces } from "@/services/places";
-import { getPlacePath } from "@/lib/place-url";
 import { getCategorySeo, SITE_NAME, SITE_URL } from "@/lib/seo";
 import type { Category } from "@/types";
 
@@ -129,27 +128,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           ) : (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {places.map((place) => (
-                <Link
-                  key={place.id}
-                  href={getPlacePath(place)}
-                  className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-900">{place.title}</h3>
-                      {place.address_text && <p className="mt-1 text-sm text-zinc-500">{place.address_text}</p>}
-                    </div>
-                    {place.is_verified && <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">Проверено</span>}
-                  </div>
-                  {place.description && <p className="mt-3 line-clamp-3 text-sm leading-6 text-zinc-600">{place.description}</p>}
-                  {place.tags.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {place.tags.slice(0, 5).map((tag) => (
-                        <TagBadge key={tag.id} label={tag.tag.name_ru} type={tag.tag.tag_type} />
-                      ))}
-                    </div>
-                  )}
-                </Link>
+                <CategoryPlaceCard key={place.id} place={place} />
               ))}
             </div>
           )}

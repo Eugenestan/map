@@ -53,6 +53,7 @@ export default function HomePage() {
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
   const [mobileListOpen, setMobileListOpen] = useState(false);
   const pendingPlaceQueryRef = useRef<string | null>(null);
+  const pendingPlaceActionRef = useRef<string | null>(null);
   const queryHandledRef = useRef(false);
   const placesRequestIdRef = useRef(0);
 
@@ -119,6 +120,10 @@ export default function HomePage() {
     if (placeQuery) {
       pendingPlaceQueryRef.current = placeQuery;
     }
+    const actionQuery = params.get("action");
+    if (actionQuery) {
+      pendingPlaceActionRef.current = actionQuery;
+    }
   }, []);
 
   const handlePlaceClick = useCallback((place: PlaceWithDetails) => {
@@ -142,10 +147,14 @@ export default function HomePage() {
 
     if (match) {
       queryHandledRef.current = true;
+      const action = pendingPlaceActionRef.current;
       pendingPlaceQueryRef.current = null;
-      handlePlaceClick(match);
+      pendingPlaceActionRef.current = null;
+      setSelectedPlace(match);
+      setFlyTo([match.lat, match.lng]);
+      setActiveModal(action === "review" ? "add-review" : "place-detail");
     }
-  }, [places, loading, handlePlaceClick]);
+  }, [places, loading]);
 
   const handleAddPlace = () => {
     setPickedLocation(null);
