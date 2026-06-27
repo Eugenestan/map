@@ -18,12 +18,13 @@ function formatCoordinate(value: number): string {
 export function CategoryPlaceCard({ place }: CategoryPlaceCardProps) {
   const router = useRouter();
   const coordinates = `${formatCoordinate(place.lat)}, ${formatCoordinate(place.lng)}`;
-  const mapPath = getPlaceMapPath(place);
+  const mapPath = getPlaceMapPath(place, { focus: true });
+  const cardMapPath = getPlaceMapPath(place);
   const reviewPath = getPlaceMapPath(place, { action: "review" });
   const previewPhoto = place.photo_urls[0] ?? null;
 
   const openOnMap = () => {
-    router.push(mapPath);
+    router.push(cardMapPath);
   };
 
   return (

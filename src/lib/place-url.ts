@@ -74,9 +74,10 @@ export type PlaceMapAction = "review";
 
 export function getPlaceMapPath(
   place: Pick<Place, "id" | "slug" | "title">,
-  options?: { action?: PlaceMapAction },
+  options?: { action?: PlaceMapAction; focus?: boolean },
 ): string {
   const params = new URLSearchParams({ place: getPlacePublicSlug(place) });
   if (options?.action) params.set("action", options.action);
+  if (options?.focus) params.set("focus", "1");
   return `/?${params.toString()}`;
 }

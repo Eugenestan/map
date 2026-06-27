@@ -45,6 +45,7 @@ export default function HomePage() {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [hasReviewsOnly, setHasReviewsOnly] = useState(false);
   const [recommendedLayerOn, setRecommendedLayerOn] = useState(false);
+  const [focusedMapPlaceId, setFocusedMapPlaceId] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithDetails | null>(null);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [pickMode, setPickMode] = useState(false);
@@ -54,6 +55,8 @@ export default function HomePage() {
   const [mobileListOpen, setMobileListOpen] = useState(false);
   const pendingPlaceQueryRef = useRef<string | null>(null);
   const pendingPlaceActionRef = useRef<string | null>(null);
+  const pendingPlaceFocusRef = useRef(false);
+  const placeFocusOnCloseRef = useRef(false);
   const queryHandledRef = useRef(false);
   const placesRequestIdRef = useRef(0);
 
@@ -114,6 +117,11 @@ export default function HomePage() {
   }, [fetchPlaces]);
 
   useEffect(() => {
+    setFocusedMapPlaceId(null);
+    placeFocusOnCloseRef.current = false;
+  }, [debouncedSearch, selectedCategory, selectedTags, verifiedOnly, hasReviewsOnly]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const placeQuery = params.get("place");
@@ -124,9 +132,14 @@ export default function HomePage() {
     if (actionQuery) {
       pendingPlaceActionRef.current = actionQuery;
     }
+    if (params.get("focus") === "1") {
+      pendingPlaceFocusRef.current = true;
+    }
   }, []);
 
   const handlePlaceClick = useCallback((place: PlaceWithDetails) => {
+    setFocusedMapPlaceId(null);
+    placeFocusOnCloseRef.current = false;
     setSelectedPlace(place);
     setActiveModal("place-detail");
     setFlyTo([place.lat, place.lng]);
@@ -148,8 +161,11 @@ export default function HomePage() {
     if (match) {
       queryHandledRef.current = true;
       const action = pendingPlaceActionRef.current;
+      const shouldFocusOnClose = pendingPlaceFocusRef.current;
       pendingPlaceQueryRef.current = null;
       pendingPlaceActionRef.current = null;
+      pendingPlaceFocusRef.current = false;
+      placeFocusOnCloseRef.current = shouldFocusOnClose;
       setSelectedPlace(match);
       setFlyTo([match.lat, match.lng]);
       setActiveModal(action === "review" ? "add-review" : "place-detail");
@@ -205,6 +221,8 @@ export default function HomePage() {
   };
 
   const handleResetFilters = () => {
+    setFocusedMapPlaceId(null);
+    placeFocusOnCloseRef.current = false;
     setSelectedCategory(null);
     setSelectedTags([]);
     setVerifiedOnly(false);
@@ -213,6 +231,10 @@ export default function HomePage() {
   };
 
   const closeModal = (cancelPick = true) => {
+    if (activeModal === "place-detail" && placeFocusOnCloseRef.current && selectedPlace) {
+      setFocusedMapPlaceId(selectedPlace.id);
+      placeFocusOnCloseRef.current = false;
+    }
     if (activeModal === "add-place" && cancelPick) {
       setPlaceFormDraft({});
     }
@@ -223,9 +245,16 @@ export default function HomePage() {
     }
   };
 
-  const mapPlaces = recommendedLayerOn
-    ? places.filter((place) => place.admin_recommended)
-    : places;
+  const mapPlaces = (() => {
+    if (focusedMapPlaceId) {
+      const focused = places.find((place) => place.id === focusedMapPlaceId);
+      return focused ? [focused] : [];
+    }
+
+    return recommendedLayerOn
+      ? places.filter((place) => place.admin_recommended)
+      : places;
+  })();
 
   return (
     <>
@@ -292,7 +321,19 @@ export default function HomePage() {
           {/* Mobile top bar */}
           <div className="md:hidden absolute top-3 left-3 right-3 z-[1000] flex flex-col gap-2">
             <SearchBar value={search} onChange={setSearch} className="shadow-lg" />
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-2">
+              {focusedMapPlaceId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocusedMapPlaceId(null);
+                    placeFocusOnCloseRef.current = false;
+                  }}
+                  className="text-xs font-medium rounded-full border border-blue-200 bg-blue-50/95 px-3 py-1.5 text-blue-700 shadow-md backdrop-blur-sm"
+                >
+                  Показать все места
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setRecommendedLayerOn(!recommendedLayerOn)}
@@ -321,6 +362,18 @@ export default function HomePage() {
           />
 
           <div className="hidden md:flex absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] items-center gap-2 rounded-full border border-zinc-200 bg-white/95 px-3 py-2 shadow-md backdrop-blur-sm">
+            {focusedMapPlaceId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFocusedMapPlaceId(null);
+                  placeFocusOnCloseRef.current = false;
+                }}
+                className="text-xs font-medium rounded-full px-3 py-1.5 text-blue-700 ring-1 ring-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
+              >
+                Показать все места
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setRecommendedLayerOn(!recommendedLayerOn)}
