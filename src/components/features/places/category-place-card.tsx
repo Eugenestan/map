@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { PlaceWithDetails } from "@/types";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { getPlaceMapPath } from "@/lib/place-url";
-import { Pencil } from "lucide-react";
+import { MapPin, Pencil } from "lucide-react";
 
 interface CategoryPlaceCardProps {
   place: PlaceWithDetails;
@@ -85,7 +85,15 @@ export function CategoryPlaceCard({ place }: CategoryPlaceCardProps) {
         </div>
       </dl>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link
+          href={mapPath}
+          onClick={(event) => event.stopPropagation()}
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+        >
+          <MapPin className="h-4 w-4" />
+          Посмотреть на карте
+        </Link>
         <Link
           href={reviewPath}
           onClick={(event) => event.stopPropagation()}
