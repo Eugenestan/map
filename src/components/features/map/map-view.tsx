@@ -228,7 +228,7 @@ export function MapView({
   }
 
   return (
-    <div className={cn("relative h-full w-full", className)} style={{ minHeight: "300px" }}>
+    <div className={cn("relative h-full w-full touch-none overscroll-none", className)} style={{ minHeight: "300px" }}>
       <MapContainer center={NHATRANG_CENTER} zoom={DEFAULT_ZOOM} className="h-full w-full z-0">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

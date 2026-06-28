@@ -117,6 +117,39 @@ export default function HomePage() {
   }, [fetchPlaces]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 767px)");
+    const lockPageScroll = () => {
+      if (!media.matches) return;
+      const { documentElement: html, body } = document;
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      body.style.overscrollBehavior = "none";
+    };
+    const unlockPageScroll = () => {
+      const { documentElement: html, body } = document;
+      html.style.overflow = "";
+      body.style.overflow = "";
+      body.style.overscrollBehavior = "";
+    };
+
+    const applyScrollLock = () => {
+      if (media.matches) {
+        lockPageScroll();
+      } else {
+        unlockPageScroll();
+      }
+    };
+
+    applyScrollLock();
+    media.addEventListener("change", applyScrollLock);
+    return () => {
+      media.removeEventListener("change", applyScrollLock);
+      unlockPageScroll();
+    };
+  }, []);
+
+  useEffect(() => {
     setFocusedMapPlaceId(null);
     placeFocusOnCloseRef.current = false;
   }, [debouncedSearch, selectedCategory, selectedTags, verifiedOnly, hasReviewsOnly]);
@@ -258,7 +291,7 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="flex min-h-0 h-dvh flex-col">
+      <div className="flex min-h-0 h-dvh max-md:fixed max-md:inset-0 max-md:z-20 max-md:overflow-hidden flex-col">
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
@@ -317,7 +350,7 @@ export default function HomePage() {
         </aside>
 
         {/* Map area */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-0 overflow-hidden touch-none overscroll-none">
           {/* Mobile top bar */}
           <div className="md:hidden absolute top-3 left-3 right-3 z-[1000] flex flex-col gap-2">
             <SearchBar value={search} onChange={setSearch} className="shadow-lg" />
@@ -520,7 +553,7 @@ export default function HomePage() {
 
 function HomeSeoSection() {
   return (
-    <main className="bg-white">
+    <main className="hidden bg-white md:block">
       <section className="mx-auto max-w-6xl px-4 py-10 md:py-14">
         <div className="max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">VietRadar</p>

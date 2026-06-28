@@ -10,6 +10,8 @@ body {
 
 .leaflet-container {
   font-family: var(--font-sans);
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .custom-marker {
