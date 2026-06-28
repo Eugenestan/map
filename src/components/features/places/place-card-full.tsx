@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useEffect } from "react";
 import type { ElementType, ReactNode } from "react";
+import Link from "next/link";
 import type { PlaceWithDetails, ReviewWithTags } from "@/types";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { TrustBadge } from "@/components/ui/trust-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PlacePhotoGallery } from "@/components/features/places/place-photo-gallery";
-import { getPlacePath } from "@/lib/place-url";
+import { getPlaceMapPath, getPlacePath } from "@/lib/place-url";
 import { computePlaceTrust } from "@/lib/trust";
 import {
   AlertTriangle,
@@ -56,6 +57,7 @@ interface PlaceCardFullProps {
   place: PlaceWithDetails;
   onReport?: () => void;
   onAddReview?: () => void;
+  showViewOnMapLink?: boolean;
 }
 
 function formatCoordinate(value: number): string {
@@ -186,7 +188,7 @@ function ReviewCard({ review, liked, onLike, collapseLongText, onOpenText }: Rev
   );
 }
 
-export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullProps) {
+export function PlaceCardFull({ place, onReport, onAddReview, showViewOnMapLink = false }: PlaceCardFullProps) {
   const [reviews, setReviews] = useState<ReviewWithTags[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [likedReviewIds, setLikedReviewIds] = useState<Set<string>>(new Set());
@@ -297,9 +299,20 @@ export function PlaceCardFull({ place, onReport, onAddReview }: PlaceCardFullPro
 
   const renderHeader = () => (
     <div>
-      <div className="mb-5 flex items-center gap-3 text-slate-500">
-        <span className="text-2xl leading-none">{place.category.icon}</span>
-        <span className="text-sm font-medium">{place.category.name_ru}</span>
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 text-slate-500">
+          <span className="text-2xl leading-none">{place.category.icon}</span>
+          <span className="text-sm font-medium">{place.category.name_ru}</span>
+        </div>
+        {showViewOnMapLink && (
+          <Link
+            href={getPlaceMapPath(place, { focus: true })}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+          >
+            <MapPin className="h-4 w-4" />
+            Посмотреть на карте
+          </Link>
+        )}
       </div>
 
       <h2 className={cn("text-4xl font-extrabold leading-tight tracking-tight max-sm:text-2xl", isDanger ? "text-red-800" : "text-[#071a49]")}>

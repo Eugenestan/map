@@ -28,6 +28,7 @@ export function PlacePageClient({ place }: Props) {
         <div className="bg-white rounded-2xl border border-zinc-200 p-6">
           <PlaceCardFull
             place={place}
+            showViewOnMapLink
             onAddReview={() => setModal("review")}
             onReport={() => setModal("report")}
           />
