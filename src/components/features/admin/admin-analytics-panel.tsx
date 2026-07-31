@@ -76,18 +76,30 @@ function MetricCard({
 }
 
 function TrafficChart({ data }: { data: AnalyticsSummary["timeseries"] }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const width = 720;
   const height = 170;
-  const padding = 16;
-  const max = Math.max(...data.flatMap((point) => [point.views, point.uniqueVisitors]), 1);
-  const point = (value: number, index: number) => {
-    const x = padding + (index / Math.max(data.length - 1, 1)) * (width - padding * 2);
-    const y = height - padding - (value / max) * (height - padding * 2);
-    return `${x},${y}`;
-  };
+  const plot = { left: 48, right: 16, top: 12, bottom: 16 };
+  const rawMax = Math.max(...data.flatMap((point) => [point.views, point.uniqueVisitors]), 1);
+  const roughStep = rawMax / 5;
+  const stepPower = 10 ** Math.floor(Math.log10(roughStep));
+  const stepFraction = roughStep / stepPower;
+  const step = Math.max(
+    1,
+    (stepFraction <= 1 ? 1 : stepFraction <= 2 ? 2 : stepFraction <= 5 ? 5 : 10) * stepPower,
+  );
+  const chartMax = step * 5;
+  const xAt = (index: number) => plot.left + (index / Math.max(data.length - 1, 1)) * (width - plot.left - plot.right);
+  const yAt = (value: number) => height - plot.bottom - (value / chartMax) * (height - plot.top - plot.bottom);
+  const point = (value: number, index: number) => `${xAt(index)},${yAt(value)}`;
   const views = data.map((item, index) => point(item.views, index)).join(" ");
   const unique = data.map((item, index) => point(item.uniqueVisitors, index)).join(" ");
   const labelIndexes = [...new Set([0, Math.floor((data.length - 1) / 2), data.length - 1])];
+  const hovered = hoveredIndex === null ? null : data[hoveredIndex];
+  const tooltipWidth = 168;
+  const tooltipHeight = 58;
+  const hoveredX = hoveredIndex === null ? 0 : xAt(hoveredIndex);
+  const tooltipX = Math.min(Math.max(hoveredX - tooltipWidth / 2, plot.left), width - plot.right - tooltipWidth);
 
   return (
     <div>
@@ -96,36 +108,87 @@ function TrafficChart({ data }: { data: AnalyticsSummary["timeseries"] }) {
         <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Уникальные</span>
       </div>
       <div className="mt-2 overflow-hidden">
-        <svg viewBox={`0 0 ${width} ${height + 22}`} className="h-48 w-full" role="img" aria-label="Динамика посещений">
-          {[0.25, 0.5, 0.75, 1].map((ratio) => (
-            <line
-              key={ratio}
-              x1={padding}
-              x2={width - padding}
-              y1={height - padding - ratio * (height - padding * 2)}
-              y2={height - padding - ratio * (height - padding * 2)}
-              stroke="#e4e4e7"
-              strokeDasharray="4 4"
-            />
-          ))}
+        <svg
+          viewBox={`0 0 ${width} ${height + 22}`}
+          className="h-48 w-full"
+          role="img"
+          aria-label="Динамика посещений"
+          onPointerLeave={() => setHoveredIndex(null)}
+        >
+          {Array.from({ length: 6 }, (_, index) => {
+            const value = step * index;
+            const y = yAt(value);
+            return (
+              <g key={value}>
+                <line
+                  x1={plot.left}
+                  x2={width - plot.right}
+                  y1={y}
+                  y2={y}
+                  stroke="#e4e4e7"
+                  strokeDasharray={index === 0 ? undefined : "4 4"}
+                />
+                <text x={plot.left - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#71717a">
+                  {formatNumber(value)}
+                </text>
+              </g>
+            );
+          })}
           <polyline points={views} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           <polyline points={unique} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           {data.map((item, index) => {
-            const [x, y] = point(item.views, index).split(",");
             return (
-              <circle key={item.day} cx={x} cy={y} r="3" fill="#2563eb">
-                <title>{item.day}: {item.views} просмотров, {item.uniqueVisitors} уникальных</title>
-              </circle>
+              <circle key={item.day} cx={xAt(index)} cy={yAt(item.views)} r="3" fill="#2563eb" />
             );
           })}
           {labelIndexes.map((index) => {
-            const x = padding + (index / Math.max(data.length - 1, 1)) * (width - padding * 2);
+            const x = xAt(index);
             return (
               <text key={data[index]?.day} x={x} y={height + 14} textAnchor={index === 0 ? "start" : index === data.length - 1 ? "end" : "middle"} fontSize="11" fill="#71717a">
                 {data[index]?.day.slice(5).split("-").reverse().join(".")}
               </text>
             );
           })}
+          {data.map((item, index) => {
+            const previousX = index === 0 ? plot.left : (xAt(index - 1) + xAt(index)) / 2;
+            const nextX = index === data.length - 1 ? width - plot.right : (xAt(index) + xAt(index + 1)) / 2;
+            return (
+              <rect
+                key={`hover-${item.day}`}
+                x={previousX}
+                y={plot.top}
+                width={Math.max(nextX - previousX, 1)}
+                height={height - plot.top - plot.bottom}
+                fill="transparent"
+                className="cursor-crosshair"
+                onPointerEnter={() => setHoveredIndex(index)}
+              />
+            );
+          })}
+          {hovered && hoveredIndex !== null && (
+            <g pointerEvents="none">
+              <line
+                x1={hoveredX}
+                x2={hoveredX}
+                y1={plot.top}
+                y2={height - plot.bottom}
+                stroke="#a1a1aa"
+                strokeDasharray="3 3"
+              />
+              <circle cx={hoveredX} cy={yAt(hovered.views)} r="5" fill="#2563eb" stroke="white" strokeWidth="2" />
+              <circle cx={hoveredX} cy={yAt(hovered.uniqueVisitors)} r="5" fill="#10b981" stroke="white" strokeWidth="2" />
+              <rect x={tooltipX} y={plot.top} width={tooltipWidth} height={tooltipHeight} rx="8" fill="#18181b" opacity="0.94" />
+              <text x={tooltipX + 10} y={plot.top + 16} fontSize="11" fill="#d4d4d8">
+                {hovered.day.slice(5).split("-").reverse().join(".")}
+              </text>
+              <text x={tooltipX + 10} y={plot.top + 34} fontSize="12" fontWeight="600" fill="#93c5fd">
+                Просмотры: {formatNumber(hovered.views)}
+              </text>
+              <text x={tooltipX + 10} y={plot.top + 50} fontSize="12" fontWeight="600" fill="#6ee7b7">
+                Уникальные: {formatNumber(hovered.uniqueVisitors)}
+              </text>
+            </g>
+          )}
         </svg>
       </div>
     </div>
