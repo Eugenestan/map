@@ -2,17 +2,28 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Check, FileText, Flag, LogOut, MapPin, MessageSquare, RefreshCw, X } from "lucide-react";
+import { Check, FileText, Flag, LogOut, MapPin, MessageSquare, Newspaper, Plus, RefreshCw, Settings, X } from "lucide-react";
 import { ApprovedPlaceEditor } from "@/components/features/admin/approved-place-editor";
 import { PendingPlaceModerationModal } from "@/components/features/admin/pending-place-moderation-modal";
 import { AddArticleModal } from "@/components/features/admin/add-article-modal";
 import { EditArticleModal } from "@/components/features/admin/edit-article-modal";
+import { InterestingArticleModal } from "@/components/features/admin/interesting-article-modal";
+import { InterestingArticleCategoriesModal } from "@/components/features/admin/interesting-article-categories-modal";
 import { FormattedText } from "@/components/ui/formatted-text";
 import { TagBadge } from "@/components/ui/tag-badge";
 import { cn } from "@/lib/cn";
-import type { Article, PlaceWithDetails, Report, ReviewWithTags, Tag } from "@/types";
+import type {
+  Article,
+  InterestingArticleCategory,
+  InterestingArticleStatus,
+  InterestingArticleWithCategory,
+  PlaceWithDetails,
+  Report,
+  ReviewWithTags,
+  Tag,
+} from "@/types";
 
-type Tab = "places" | "approved" | "reviews" | "reports" | "articles";
+type Tab = "places" | "approved" | "reviews" | "reports" | "articles" | "interestingArticles";
 
 interface ReportWithTitle extends Report {
   entity_title?: string;
@@ -34,6 +45,8 @@ interface VisitSummary {
   }>;
 }
 
+const INTERESTING_ARTICLES_PAGE_SIZE = 20;
+
 export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("places");
@@ -42,10 +55,23 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
   const [pendingReviews, setPendingReviews] = useState<ReviewWithTags[]>([]);
   const [reports, setReports] = useState<ReportWithTitle[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [interestingArticles, setInterestingArticles] = useState<InterestingArticleWithCategory[]>([]);
+  const [interestingArticlesTotal, setInterestingArticlesTotal] = useState(0);
+  const [interestingArticleCategories, setInterestingArticleCategories] = useState<InterestingArticleCategory[]>([]);
+  const [interestingArticlesLoading, setInterestingArticlesLoading] = useState(false);
+  const [interestingArticlesError, setInterestingArticlesError] = useState("");
+  const [interestingArticlesQueryInput, setInterestingArticlesQueryInput] = useState("");
+  const [interestingArticlesQuery, setInterestingArticlesQuery] = useState("");
+  const [interestingArticlesStatus, setInterestingArticlesStatus] = useState<InterestingArticleStatus | "">("");
+  const [interestingArticlesCategory, setInterestingArticlesCategory] = useState("");
+  const [interestingArticlesOffset, setInterestingArticlesOffset] = useState(0);
   const [selectedApprovedPlace, setSelectedApprovedPlace] = useState<PlaceWithDetails | null>(null);
   const [selectedPendingPlace, setSelectedPendingPlace] = useState<PlaceWithDetails | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [selectedInterestingArticle, setSelectedInterestingArticle] = useState<InterestingArticleWithCategory | null>(null);
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
+  const [isInterestingArticleModalOpen, setIsInterestingArticleModalOpen] = useState(false);
+  const [isInterestingCategoriesModalOpen, setIsInterestingCategoriesModalOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [visitSummary, setVisitSummary] = useState<VisitSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,9 +122,65 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     }
   }, [handleUnauthorized]);
 
+  const fetchInterestingArticleCategories = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/interesting-article-categories");
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || "Не удалось загрузить категории");
+      setInterestingArticleCategories(body?.data || []);
+    } catch (error) {
+      setInterestingArticlesError(error instanceof Error ? error.message : "Не удалось загрузить категории");
+    }
+  }, [handleUnauthorized]);
+
+  const fetchInterestingArticles = useCallback(async () => {
+    setInterestingArticlesLoading(true);
+    setInterestingArticlesError("");
+    try {
+      const params = new URLSearchParams({
+        limit: String(INTERESTING_ARTICLES_PAGE_SIZE),
+        offset: String(interestingArticlesOffset),
+      });
+      if (interestingArticlesQuery) params.set("q", interestingArticlesQuery);
+      if (interestingArticlesStatus) params.set("status", interestingArticlesStatus);
+      if (interestingArticlesCategory) params.set("category", interestingArticlesCategory);
+      const response = await fetch(`/api/admin/interesting-articles?${params.toString()}`);
+      if (response.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || "Не удалось загрузить интересные статьи");
+      setInterestingArticles(body?.data || []);
+      setInterestingArticlesTotal(body?.total || 0);
+    } catch (error) {
+      setInterestingArticlesError(error instanceof Error ? error.message : "Не удалось загрузить интересные статьи");
+    } finally {
+      setInterestingArticlesLoading(false);
+    }
+  }, [
+    handleUnauthorized,
+    interestingArticlesCategory,
+    interestingArticlesOffset,
+    interestingArticlesQuery,
+    interestingArticlesStatus,
+  ]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    void fetchInterestingArticleCategories();
+  }, [fetchInterestingArticleCategories]);
+
+  useEffect(() => {
+    if (tab === "interestingArticles") void fetchInterestingArticles();
+  }, [fetchInterestingArticles, tab]);
 
   useEffect(() => {
     fetch("/api/tags")
@@ -169,7 +251,8 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
     { id: "approved", label: "Одобренные", count: approvedPlaces.length, icon: <MapPin className="h-4 w-4" /> },
     { id: "reviews", label: "Отзывы", count: pendingReviews.length, icon: <MessageSquare className="h-4 w-4" /> },
     { id: "reports", label: "Жалобы", count: reports.length, icon: <Flag className="h-4 w-4" /> },
-    { id: "articles", label: "Места", count: articles.length, icon: <FileText className="h-4 w-4" /> },
+    { id: "articles", label: "Интересные места", count: articles.length, icon: <FileText className="h-4 w-4" /> },
+    { id: "interestingArticles", label: "Интересные статьи", count: interestingArticlesTotal, icon: <Newspaper className="h-4 w-4" /> },
   ];
 
   return (
@@ -180,18 +263,42 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
           <p className="mt-1 text-sm text-zinc-500">Вы вошли как {adminEmail}</p>
         </div>
         <div className="flex items-center gap-2">
+          {tab === "articles" && (
+            <button
+              onClick={() => setIsArticleModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50"
+            >
+              <Plus className="h-4 w-4" /> Добавить место
+            </button>
+          )}
+          {tab === "interestingArticles" && (
+            <>
+              <button
+                onClick={() => setIsInterestingCategoriesModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50"
+              >
+                <Settings className="h-4 w-4" /> Категории
+              </button>
+              <button
+                onClick={() => setIsInterestingArticleModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" /> Новая статья
+              </button>
+            </>
+          )}
           <button
-            onClick={() => setIsArticleModalOpen(true)}
+            onClick={() => {
+              void fetchData();
+              if (tab === "interestingArticles") {
+                void fetchInterestingArticles();
+                void fetchInterestingArticleCategories();
+              }
+            }}
+            disabled={loading || interestingArticlesLoading}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50"
           >
-            Добавить место
-          </button>
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50"
-          >
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} /> Обновить
+            <RefreshCw className={cn("h-4 w-4", (loading || interestingArticlesLoading) && "animate-spin")} /> Обновить
           </button>
           <button
             onClick={handleLogout}
@@ -240,7 +347,7 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         </div>
       )}
 
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         {tabs.map((currentTab) => (
           <button
             key={currentTab.id}
@@ -487,6 +594,129 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         </div>
       )}
 
+      {tab === "interestingArticles" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <form
+              className="grid gap-3 md:grid-cols-[minmax(180px,1fr)_180px_180px_auto]"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setInterestingArticlesOffset(0);
+                setInterestingArticlesQuery(interestingArticlesQueryInput.trim());
+              }}
+            >
+              <input
+                value={interestingArticlesQueryInput}
+                onChange={(event) => setInterestingArticlesQueryInput(event.target.value)}
+                placeholder="Поиск по статьям..."
+                className="rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+              <select
+                value={interestingArticlesStatus}
+                onChange={(event) => {
+                  setInterestingArticlesOffset(0);
+                  setInterestingArticlesStatus(event.target.value as InterestingArticleStatus | "");
+                }}
+                className="rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              >
+                <option value="">Все статусы</option>
+                <option value="draft">Черновики</option>
+                <option value="published">Опубликованные</option>
+              </select>
+              <select
+                value={interestingArticlesCategory}
+                onChange={(event) => {
+                  setInterestingArticlesOffset(0);
+                  setInterestingArticlesCategory(event.target.value);
+                }}
+                className="rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              >
+                <option value="">Все категории</option>
+                {interestingArticleCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name_ru}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800">
+                Найти
+              </button>
+            </form>
+          </div>
+
+          {interestingArticlesError && (
+            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{interestingArticlesError}</p>
+          )}
+
+          {interestingArticlesLoading ? (
+            <div className="py-12 text-center text-zinc-400">Загрузка статей...</div>
+          ) : interestingArticles.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-zinc-200 bg-white py-12 text-center">
+              <p className="text-zinc-500">Статей по выбранным условиям нет</p>
+              <button onClick={() => setIsInterestingArticleModalOpen(true)} className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700">
+                Создать первую статью
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {interestingArticles.map((article) => (
+                <div key={article.id} className="rounded-xl border border-zinc-200 bg-white p-4">
+                  <div className="flex items-start gap-4">
+                    {article.cover_image_url && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={article.cover_image_url} alt="" className="hidden h-24 w-36 flex-shrink-0 rounded-lg object-cover sm:block" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${article.status === "published" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
+                          {article.status === "published" ? "Опубликована" : "Черновик"}
+                        </span>
+                        <span className="text-xs text-zinc-400">{article.category.name_ru}</span>
+                      </div>
+                      <h3 className="mt-1 font-semibold text-zinc-900">{article.title}</h3>
+                      <p className="mt-1 line-clamp-2 text-sm text-zinc-600">{article.excerpt}</p>
+                      <p className="mt-2 text-xs text-zinc-400">
+                        /interesting-articles/{article.slug} · {article.media_urls.length} медиа · {article.place_ids.length} мест · обновлено {new Date(article.updated_at).toLocaleDateString("ru")}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedInterestingArticle(article)}
+                      className="flex-shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                    >
+                      Редактировать
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {interestingArticlesTotal > INTERESTING_ARTICLES_PAGE_SIZE && (
+            <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3">
+              <span className="text-sm text-zinc-500">
+                {interestingArticlesOffset + 1}–{Math.min(interestingArticlesOffset + INTERESTING_ARTICLES_PAGE_SIZE, interestingArticlesTotal)} из {interestingArticlesTotal}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  disabled={interestingArticlesOffset === 0}
+                  onClick={() => setInterestingArticlesOffset((offset) => Math.max(0, offset - INTERESTING_ARTICLES_PAGE_SIZE))}
+                  className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 disabled:opacity-40"
+                >
+                  Назад
+                </button>
+                <button
+                  disabled={interestingArticlesOffset + INTERESTING_ARTICLES_PAGE_SIZE >= interestingArticlesTotal}
+                  onClick={() => setInterestingArticlesOffset((offset) => offset + INTERESTING_ARTICLES_PAGE_SIZE)}
+                  className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 disabled:opacity-40"
+                >
+                  Далее
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <ApprovedPlaceEditor
         place={selectedApprovedPlace}
         isOpen={!!selectedApprovedPlace}
@@ -520,6 +750,30 @@ export function AdminDashboard({ adminEmail }: AdminDashboardProps) {
         onDeleted={fetchData}
         tags={tags}
         places={approvedPlaces}
+      />
+      <InterestingArticleModal
+        key={selectedInterestingArticle ? `${selectedInterestingArticle.id}-${selectedInterestingArticle.updated_at}` : "new-interesting-article"}
+        article={selectedInterestingArticle}
+        isOpen={isInterestingArticleModalOpen || !!selectedInterestingArticle}
+        categories={interestingArticleCategories}
+        places={approvedPlaces}
+        onClose={() => {
+          setIsInterestingArticleModalOpen(false);
+          setSelectedInterestingArticle(null);
+        }}
+        onUnauthorized={handleUnauthorized}
+        onSaved={fetchInterestingArticles}
+        onDeleted={fetchInterestingArticles}
+      />
+      <InterestingArticleCategoriesModal
+        isOpen={isInterestingCategoriesModalOpen}
+        categories={interestingArticleCategories}
+        onClose={() => setIsInterestingCategoriesModalOpen(false)}
+        onUnauthorized={handleUnauthorized}
+        onChanged={async () => {
+          await fetchInterestingArticleCategories();
+          await fetchInterestingArticles();
+        }}
       />
     </div>
   );

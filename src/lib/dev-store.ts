@@ -1,5 +1,13 @@
 import { CATEGORIES, MOCK_PLACES, MOCK_REVIEWS, TAGS } from "@/data/seed";
-import type { Article, PlaceStatus, Report, ReportStatus, ReviewStatus } from "@/types";
+import type {
+  Article,
+  InterestingArticle,
+  InterestingArticleCategory,
+  PlaceStatus,
+  Report,
+  ReportStatus,
+  ReviewStatus,
+} from "@/types";
 
 type DevPlaceRecord = {
   id: string;
@@ -47,6 +55,8 @@ declare global {
         reviews: DevReviewRecord[];
         reports: Report[];
         articles: DevArticleRecord[];
+        interestingArticles: InterestingArticle[];
+        interestingArticleCategories: InterestingArticleCategory[];
         reviewSessionLikes: Set<string>;
         visitStats: Map<string, { visits: number; visitors: Set<string> }>;
       }
@@ -96,6 +106,8 @@ function createInitialStore() {
     reviews,
     reports: [],
     articles: [],
+    interestingArticles: [],
+    interestingArticleCategories: [],
     reviewSessionLikes: new Set<string>(),
     visitStats: new Map(),
   };
@@ -107,6 +119,8 @@ export function getDevStore() {
   } else if (!global.__nhatrangDevStore__.reviewSessionLikes) {
     global.__nhatrangDevStore__.reviewSessionLikes = new Set();
   }
+  global.__nhatrangDevStore__.interestingArticles ??= [];
+  global.__nhatrangDevStore__.interestingArticleCategories ??= [];
 
   return global.__nhatrangDevStore__;
 }
@@ -198,6 +212,68 @@ export function deleteDevArticle(id: string) {
     return false;
   }
   store.articles = next;
+  return true;
+}
+
+export function listDevInterestingArticles() {
+  return getDevStore().interestingArticles;
+}
+
+export function getDevInterestingArticleById(id: string) {
+  return getDevStore().interestingArticles.find((article) => article.id === id) ?? null;
+}
+
+export function insertDevInterestingArticle(article: InterestingArticle) {
+  getDevStore().interestingArticles.unshift(article);
+}
+
+export function updateDevInterestingArticle(
+  id: string,
+  updater: (article: InterestingArticle) => InterestingArticle,
+) {
+  const store = getDevStore();
+  const index = store.interestingArticles.findIndex((article) => article.id === id);
+  if (index === -1) return false;
+  store.interestingArticles[index] = updater(store.interestingArticles[index]);
+  return true;
+}
+
+export function deleteDevInterestingArticle(id: string) {
+  const store = getDevStore();
+  const next = store.interestingArticles.filter((article) => article.id !== id);
+  if (next.length === store.interestingArticles.length) return false;
+  store.interestingArticles = next;
+  return true;
+}
+
+export function listDevInterestingArticleCategories() {
+  return getDevStore().interestingArticleCategories;
+}
+
+export function getDevInterestingArticleCategoryById(id: string) {
+  return getDevStore().interestingArticleCategories.find((category) => category.id === id) ?? null;
+}
+
+export function insertDevInterestingArticleCategory(category: InterestingArticleCategory) {
+  getDevStore().interestingArticleCategories.push(category);
+}
+
+export function updateDevInterestingArticleCategory(
+  id: string,
+  updater: (category: InterestingArticleCategory) => InterestingArticleCategory,
+) {
+  const store = getDevStore();
+  const index = store.interestingArticleCategories.findIndex((category) => category.id === id);
+  if (index === -1) return false;
+  store.interestingArticleCategories[index] = updater(store.interestingArticleCategories[index]);
+  return true;
+}
+
+export function deleteDevInterestingArticleCategory(id: string) {
+  const store = getDevStore();
+  const next = store.interestingArticleCategories.filter((category) => category.id !== id);
+  if (next.length === store.interestingArticleCategories.length) return false;
+  store.interestingArticleCategories = next;
   return true;
 }
 

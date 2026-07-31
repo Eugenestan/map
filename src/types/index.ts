@@ -131,6 +131,49 @@ export interface Article {
   place_id: string | null;
 }
 
+export type InterestingArticleStatus = "draft" | "published";
+
+export interface InterestingArticleCategory {
+  id: string;
+  slug: string;
+  name_ru: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InterestingArticle {
+  id: string;
+  category_id: string;
+  status: InterestingArticleStatus;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content_html: string;
+  cover_image_url: string | null;
+  media_urls: string[];
+  seo_title: string | null;
+  seo_description: string | null;
+  seo_keywords: string[];
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  place_ids: string[];
+}
+
+export interface InterestingArticleWithCategory extends InterestingArticle {
+  category: InterestingArticleCategory;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface BBox {
   north: number;
   south: number;

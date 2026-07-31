@@ -188,3 +188,65 @@ export const createArticleSchema = z.object({
 });
 
 export type CreateArticleInput = z.infer<typeof createArticleSchema>;
+
+const articleSlugSchema = z
+  .string()
+  .trim()
+  .min(1, "Slug не может быть пустым")
+  .max(200, "Slug не длиннее 200 символов")
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug должен содержать латинские буквы, цифры и дефисы");
+
+const interestingArticleFields = {
+  category_id: z.string().trim().min(1, "Выберите категорию"),
+  status: z.enum(["draft", "published"]),
+  title: z.string().trim().min(2, "Заголовок должен быть не менее 2 символов").max(200),
+  slug: articleSlugSchema.optional(),
+  excerpt: z.string().trim().min(10, "Анонс должен быть не менее 10 символов").max(1000),
+  content_html: z.string().trim().min(20, "Текст статьи должен быть не менее 20 символов").max(100000),
+  cover_image_url: z
+    .string()
+    .trim()
+    .url("Некорректная ссылка на обложку")
+    .max(2048, "Слишком длинная ссылка на обложку")
+    .nullable()
+    .optional(),
+  media_urls: z
+    .array(z.string().trim().url("Некорректная ссылка на медиа").max(2048, "Слишком длинная ссылка на медиа"))
+    .max(20, "Максимум 20 медиафайлов")
+    .default([]),
+  seo_title: z.string().trim().max(70, "SEO-заголовок не длиннее 70 символов").nullable().optional(),
+  seo_description: z.string().trim().max(200, "SEO-описание не длиннее 200 символов").nullable().optional(),
+  seo_keywords: z
+    .array(z.string().trim().min(1).max(100))
+    .max(30, "Максимум 30 SEO-ключей")
+    .default([]),
+  place_ids: z.array(z.string().trim().min(1)).max(100, "Максимум 100 упомянутых мест").default([]),
+};
+
+export const createInterestingArticleSchema = z.object(interestingArticleFields);
+
+export const updateInterestingArticleSchema = z
+  .object(interestingArticleFields)
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, "Передайте хотя бы одно поле");
+
+export type CreateInterestingArticleInput = z.infer<typeof createInterestingArticleSchema>;
+export type UpdateInterestingArticleInput = z.infer<typeof updateInterestingArticleSchema>;
+
+const interestingArticleCategoryFields = {
+  name_ru: z.string().trim().min(2, "Название должно быть не менее 2 символов").max(100),
+  slug: articleSlugSchema.optional(),
+  description: z.string().trim().max(1000, "Описание не длиннее 1000 символов").nullable().optional(),
+  sort_order: z.number().int().min(0).max(100000).default(0),
+  is_active: z.boolean().default(true),
+};
+
+export const createInterestingArticleCategorySchema = z.object(interestingArticleCategoryFields);
+
+export const updateInterestingArticleCategorySchema = z
+  .object(interestingArticleCategoryFields)
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, "Передайте хотя бы одно поле");
+
+export type CreateInterestingArticleCategoryInput = z.infer<typeof createInterestingArticleCategorySchema>;
+export type UpdateInterestingArticleCategoryInput = z.infer<typeof updateInterestingArticleCategorySchema>;
