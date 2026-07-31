@@ -47,5 +47,7 @@ jobs:
             git fetch origin
             git reset --hard origin/master
             RELEASE="$(git rev-parse --short HEAD)"
+            docker builder prune --all --force
+            docker image prune --all --force
             docker compose build --build-arg "RELEASE=${RELEASE}" app
             docker compose up -d
