@@ -48,6 +48,20 @@ type DevReviewRecord = {
   updated_at: string;
 };
 
+export type DevAnalyticsEvent = {
+  occurred_at: string;
+  event_type: "page_view" | "action";
+  path: string;
+  target: string | null;
+  entity_id: string | null;
+  visitor_id: string;
+  referrer_host: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  device_type: "mobile" | "desktop" | "tablet" | "other";
+};
+
 declare global {
   var __nhatrangDevStore__:
     | {
@@ -59,6 +73,7 @@ declare global {
         interestingArticleCategories: InterestingArticleCategory[];
         reviewSessionLikes: Set<string>;
         visitStats: Map<string, { visits: number; visitors: Set<string> }>;
+        analyticsEvents: DevAnalyticsEvent[];
       }
     | undefined;
 }
@@ -110,6 +125,7 @@ function createInitialStore() {
     interestingArticleCategories: [],
     reviewSessionLikes: new Set<string>(),
     visitStats: new Map(),
+    analyticsEvents: [],
   };
 }
 
@@ -121,6 +137,7 @@ export function getDevStore() {
   }
   global.__nhatrangDevStore__.interestingArticles ??= [];
   global.__nhatrangDevStore__.interestingArticleCategories ??= [];
+  global.__nhatrangDevStore__.analyticsEvents ??= [];
 
   return global.__nhatrangDevStore__;
 }
@@ -323,4 +340,12 @@ export function listDevVisitStats(days = 7) {
     })
     .filter((row) => row.day >= fromKey)
     .sort((a, b) => (a.day === b.day ? a.path.localeCompare(b.path) : b.day.localeCompare(a.day)));
+}
+
+export function trackDevAnalyticsEvent(event: DevAnalyticsEvent) {
+  getDevStore().analyticsEvents.push(event);
+}
+
+export function listDevAnalyticsEvents() {
+  return getDevStore().analyticsEvents;
 }

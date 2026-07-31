@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVisitorSessionFromRequest, VISITOR_SESSION_COOKIE } from "@/lib/visitor-session";
+import { isLikelyBot, recordAnalyticsEvent } from "@/services/analytics";
 import { registerVisit } from "@/services/visits";
 
 function shouldTrackPath(path: string): boolean {
@@ -8,15 +9,38 @@ function shouldTrackPath(path: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json().catch(() => ({}))) as { path?: string };
+    const body = (await request.json().catch(() => ({}))) as {
+      path?: string;
+      referrerHost?: string;
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+    };
     const path = typeof body.path === "string" ? body.path : "/";
 
     if (!shouldTrackPath(path)) {
       return NextResponse.json({ ok: true });
     }
 
+    const userAgent = request.headers.get("user-agent") ?? "";
+    if (isLikelyBot(userAgent)) {
+      return NextResponse.json({ ok: true });
+    }
+
     const session = getVisitorSessionFromRequest(request);
-    await registerVisit(path, session.id, session.isNew);
+    await Promise.all([
+      registerVisit(path, session.id, session.isNew),
+      recordAnalyticsEvent({
+        eventType: "page_view",
+        path,
+        visitorId: session.id,
+        userAgent,
+        referrerHost: body.referrerHost,
+        utmSource: body.utmSource,
+        utmMedium: body.utmMedium,
+        utmCampaign: body.utmCampaign,
+      }),
+    ]);
 
     const response = NextResponse.json({ ok: true });
     if (session.isNew) {

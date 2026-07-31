@@ -48,7 +48,7 @@ export async function registerVisit(rawPath: string, sessionId: string, isUnique
   await execute(
     `
       INSERT INTO site_visits (day, path, visits, unique_visitors)
-      VALUES ($1::date, $2, 1, 1)
+      VALUES ($1::date, $2, 1, $3::int)
       ON CONFLICT (day, path)
       DO UPDATE SET
         visits = site_visits.visits + 1,

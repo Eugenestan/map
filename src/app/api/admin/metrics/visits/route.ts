@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { getVisitSummary } from "@/services/visits";
+import { getAnalyticsSummary } from "@/services/analytics";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
       return authResponse;
     }
 
-    const summary = await getVisitSummary(7);
+    const requestedDays = Number(request.nextUrl.searchParams.get("days") ?? 7);
+    const summary = await getAnalyticsSummary(requestedDays);
     return NextResponse.json({ data: summary });
   } catch (error) {
     console.error(error);

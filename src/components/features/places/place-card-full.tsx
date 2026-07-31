@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PlacePhotoGallery } from "@/components/features/places/place-photo-gallery";
 import { getPlaceMapPath, getPlacePath } from "@/lib/place-url";
 import { computePlaceTrust } from "@/lib/trust";
+import { trackAction } from "@/lib/analytics-client";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -77,6 +78,11 @@ function formatReviewDate(review: ReviewWithTags): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function telegramUrl(value: string): string {
+  if (/^https?:\/\//i.test(value)) return value;
+  return `https://t.me/${value.replace(/^@/, "")}`;
 }
 
 function SectionDivider() {
@@ -257,6 +263,7 @@ export function PlaceCardFull({ place, onReport, onAddReview, showViewOnMapLink 
   };
 
   const handleShare = async () => {
+    trackAction("share", place.id);
     const placeUrl = `${window.location.origin}${getPlacePath(place)}`;
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
     const shareText = [
@@ -285,6 +292,7 @@ export function PlaceCardFull({ place, onReport, onAddReview, showViewOnMapLink 
   };
 
   const handleRoute = () => {
+    trackAction("route", place.id);
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`, "_blank");
   };
 
@@ -460,7 +468,15 @@ export function PlaceCardFull({ place, onReport, onAddReview, showViewOnMapLink 
           <InfoRow
             icon={Phone}
             label="Телефон:"
-            value={place.phone ? <a href={`tel:${place.phone}`} className="hover:text-blue-600">{place.phone}</a> : "Не указан"}
+            value={
+              place.phone ? (
+                <a href={`tel:${place.phone}`} onClick={() => trackAction("phone", place.id)} className="hover:text-blue-600">
+                  {place.phone}
+                </a>
+              ) : (
+                "Не указан"
+              )
+            }
           />
           <InfoRow icon={Mail} label="Email:" value="Не указан" />
           <InfoRow
@@ -468,7 +484,13 @@ export function PlaceCardFull({ place, onReport, onAddReview, showViewOnMapLink 
             label="Сайт:"
             value={
               place.website ? (
-                <a href={place.website} target="_blank" rel="noopener" className="block truncate hover:text-blue-600">
+                <a
+                  href={place.website}
+                  target="_blank"
+                  rel="noopener"
+                  onClick={() => trackAction("website", place.id)}
+                  className="block truncate hover:text-blue-600"
+                >
                   {place.website}
                 </a>
               ) : (
@@ -476,7 +498,23 @@ export function PlaceCardFull({ place, onReport, onAddReview, showViewOnMapLink 
               )
             }
           />
-          {place.telegram && <InfoRow icon={Send} label="Telegram:" value={<span className="block break-words">{place.telegram}</span>} />}
+          {place.telegram && (
+            <InfoRow
+              icon={Send}
+              label="Telegram:"
+              value={
+                <a
+                  href={telegramUrl(place.telegram)}
+                  target="_blank"
+                  rel="noopener"
+                  onClick={() => trackAction("telegram", place.id)}
+                  className="block break-words hover:text-blue-600"
+                >
+                  {place.telegram}
+                </a>
+              }
+            />
+          )}
         </div>
       </section>
 
