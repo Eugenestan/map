@@ -13,6 +13,7 @@ import "leaflet/dist/leaflet.css";
 const NHATRANG_CENTER: [number, number] = [12.2451, 109.1943];
 const DEFAULT_ZOOM = 14;
 const TOOLTIP_DESCRIPTION_LIMIT = 20;
+const iconCache = new Map<string, L.DivIcon>();
 
 function truncate(text: string | null | undefined, limit = TOOLTIP_DESCRIPTION_LIMIT): string | null {
   if (!text) return null;
@@ -47,17 +48,23 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function createIcon(categoryId: string, icon: string, options?: { recommendedGlow?: boolean }) {
+  const cacheKey = `${categoryId}:${icon}:${options?.recommendedGlow ? "recommended" : "default"}`;
+  const cachedIcon = iconCache.get(cacheKey);
+  if (cachedIcon) return cachedIcon;
+
   const color = CATEGORY_COLORS[categoryId] || "#6b7280";
   const inner = `<div style="background:${color};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">${icon}</div>`;
 
   if (!options?.recommendedGlow) {
-    return L.divIcon({
+    const markerIcon = L.divIcon({
       className: "custom-marker",
       html: inner,
       iconSize: [32, 32],
       iconAnchor: [16, 32],
       popupAnchor: [0, -32],
     });
+    iconCache.set(cacheKey, markerIcon);
+    return markerIcon;
   }
 
   const html = `
@@ -67,13 +74,15 @@ function createIcon(categoryId: string, icon: string, options?: { recommendedGlo
       <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:center;">${inner}</div>
     </div>`;
 
-  return L.divIcon({
+  const markerIcon = L.divIcon({
     className: "custom-marker",
     html,
     iconSize: [42, 42],
     iconAnchor: [21, 42],
     popupAnchor: [0, -42],
   });
+  iconCache.set(cacheKey, markerIcon);
+  return markerIcon;
 }
 
 interface MapEventsProps {
@@ -229,10 +238,21 @@ export function MapView({
 
   return (
     <div className={cn("relative h-full w-full touch-none overscroll-none", className)} style={{ minHeight: "300px" }}>
-      <MapContainer center={NHATRANG_CENTER} zoom={DEFAULT_ZOOM} className="h-full w-full z-0">
+      <MapContainer
+        center={NHATRANG_CENTER}
+        zoom={DEFAULT_ZOOM}
+        zoomSnap={0.25}
+        touchZoom="center"
+        bounceAtZoomLimits={false}
+        inertia={false}
+        className="h-full w-full z-0"
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          updateWhenZooming={false}
+          updateInterval={200}
+          keepBuffer={3}
         />
         <AttributionPrefixCleaner />
         <MapRefBridge onReady={setMap} />
